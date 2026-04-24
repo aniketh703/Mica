@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "MICA",
+    "slug": "mica",
+    "scheme": "mica",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.mica.app"
+    },
+    "assetBundlePatterns": ["**/*"]
+  }
+}
