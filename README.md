@@ -1,54 +1,99 @@
 # MICA
 
-Make time visible.
+MICA is a privacy-first Expo and React Native app that makes time visible. It turns the current year and important life events into calm, glanceable progress views for mobile and, eventually, Android widgets.
 
-MICA is a privacy-first Expo + React Native app for Android that turns the current year and upcoming life events into calm, always-visible time visuals. This repository currently contains the v1 architecture and a TypeScript app shell aligned with the product brief.
+## Features
 
-## Product Shape
+- Year progress dashboard with a 365/366-day visual grid.
+- Event countdowns for birthdays, anniversaries, deadlines, vacations, and custom milestones.
+- Local-first state management for events, preferences, and premium status.
+- Expo-compatible TypeScript app shell with navigation, themed screens, and reusable UI components.
+- Planned native Android integrations for widgets, notifications, background refresh, and billing.
 
-- Minimal year-progress experience centered on a 365/366-day grid
-- Event countdowns for birthdays, anniversaries, deadlines, vacations, and custom milestones
-- Native Android widgets for year progress and countdown visibility
-- Smart local reminders using Android scheduling APIs
-- One-time premium unlock with no accounts and no cloud dependency
+## Tech Stack
 
-## Current Structure
-
-- `src/navigation`: app navigation and tab structure
-- `src/screens`: primary product surfaces
-- `src/components`: reusable UI and time-visual components
-- `src/store`: local app state for events, preferences, and premium status
-- `src/lib`: date logic and formatting helpers
-- `src/native`: TypeScript-facing native integration contracts
-- `docs`: architecture and implementation planning
-
-## Expo Runtime Notes
-
-- The current year-progress experience is Expo Go compatible.
-- Android widgets, billing, and custom native notification modules are not available in Expo Go.
-- For those features, move to an Expo development build with `npx expo prebuild` and native modules/config plugins.
-
-## Planned Native Android Modules
-
-- Widgets via Kotlin App Widgets
-- Notifications via `NotificationManager`
-- Background refresh via `WorkManager`
-- Local persistence via Expo-friendly storage in v1, Room bridge later if needed
-- Billing via Google Play Billing and `react-native-iap`
-
-## Recommended Build Order
-
-1. Finalize the React Native base project and install dependencies.
-2. Implement event persistence and editing flows.
-3. Build Android widget native module and refresh pipeline.
-4. Add notifications and premium purchase flow.
-5. Harden accessibility, testing, and release configuration.
+- Expo 55
+- React 19
+- React Native 0.83
+- TypeScript
+- React Navigation
+- Zustand
+- Jest
 
 ## Getting Started
 
-This repo is set up for Expo-based development. If you want native Android/iOS directories later, generate them with `npx expo prebuild`.
+Install dependencies:
 
-If you want, the next step can be either:
+```bash
+npm install
+```
 
-1. scaffold the full React Native project files for Android, or
-2. keep building product logic and UI first inside this source structure.
+Start the Expo development server:
+
+```bash
+npm start
+```
+
+Run on Android:
+
+```bash
+npm run android
+```
+
+Run on iOS:
+
+```bash
+npm run ios
+```
+
+Run on web:
+
+```bash
+npm run web
+```
+
+## Scripts
+
+- `npm start`: start the Expo development server.
+- `npm run android`: open the app in an Android target.
+- `npm run ios`: open the app in an iOS target.
+- `npm run web`: open the app in a web target.
+- `npm run prebuild`: generate native Android and iOS project folders.
+- `npm run lint`: run ESLint.
+- `npm run typecheck`: run TypeScript without emitting files.
+- `npm test`: run Jest tests.
+
+## Project Structure
+
+```text
+.
+├── App.tsx
+├── docs/
+│   └── architecture.md
+├── src/
+│   ├── components/
+│   ├── features/
+│   ├── lib/
+│   ├── native/
+│   ├── navigation/
+│   ├── screens/
+│   ├── store/
+│   ├── theme/
+│   └── types/
+└── package.json
+```
+
+## Expo Runtime Notes
+
+The current app shell and year-progress experience are Expo Go compatible. Native Android widgets, billing, and custom notification modules require an Expo development build generated with `npm run prebuild`.
+
+## Product Direction
+
+MICA is designed around a few constraints:
+
+- Keep personal event data on the device.
+- Prefer calm, low-noise visuals over heavy analytics.
+- Share date math and presentation logic in TypeScript.
+- Use native Android only where it materially improves the product, such as widgets and scheduled reminders.
+
+See [docs/architecture.md](docs/architecture.md) for the architecture plan.

@@ -3,8 +3,10 @@ import {ColorSchemeName, useColorScheme} from 'react-native';
 import {useMicaStore} from '../store/useMicaStore';
 import {palettes} from './palette';
 
+type ThemePalette = (typeof palettes)[keyof typeof palettes];
+
 type ThemeValue = {
-  theme: typeof palettes.mica;
+  theme: ThemePalette;
   resolvedMode: Exclude<ColorSchemeName, null>;
   statusBarStyle: 'dark-content' | 'light-content';
 };
@@ -22,7 +24,7 @@ export function ThemeProvider({
 
   const theme = resolvedMode === 'dark' ? palettes.midnight : palettes.mica;
 
-  const value = useMemo(
+  const value = useMemo<ThemeValue>(
     () => ({
       theme,
       resolvedMode,

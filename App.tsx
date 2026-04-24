@@ -12,7 +12,7 @@ function AppShell(): JSX.Element {
     <>
       <StatusBar
         barStyle={statusBarStyle}
-        backgroundColor={theme.colors.background}
+        backgroundColor={theme.background}
       />
       <AppNavigator />
     </>
