@@ -29,3 +29,14 @@ export function formatDays(n: number): string {
   if (n === 1) return 'Tomorrow';
   return `${n}d`;
 }
+
+/**
+ * Convert an ISO date string ("YYYY-MM-DD") to a 1-based day-of-year integer.
+ * Full implementation will be completed in Task 5.
+ */
+export function dateIsoToDayOfYear(iso: string): number {
+  const [year, month, day] = iso.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const start = new Date(year, 0, 1);
+  return Math.round((date.getTime() - start.getTime()) / 86400000) + 1;
+}

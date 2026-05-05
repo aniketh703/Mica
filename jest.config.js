@@ -7,6 +7,7 @@ module.exports = {
     'node_modules/(?!(react-native|@react-native|@react-navigation)/)',
   ],
   moduleNameMapper: {
+    'react-native/Libraries/Animated/NativeAnimatedHelper': '<rootDir>/__mocks__/NativeAnimatedHelper.js',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@components/(.*)$': '<rootDir>/src/components/$1',
     '^@screens/(.*)$': '<rootDir>/src/screens/$1',
