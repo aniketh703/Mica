@@ -5,9 +5,9 @@ export interface MicaEvent {
   title: string;
   dateIso: string;      // "YYYY-MM-DD" (was formatted "May 3")
   color: string;
-  type: string;         // 'Birthday' | 'Deadline' | 'Vacation' | 'Milestone' | 'Other'
-  repeats: string;      // 'None' | 'Yearly' | 'Monthly'
-  reminder: string;     // 'None' | '1 day before' | '3 days before' | '1 week before' | 'On the day'
+  type: EventTypeOption;
+  repeats: RepeatOption;
+  reminder: ReminderOption;
   note: string;
   dayOfYear: number;    // derived from dateIso on write
   notificationIds: string[];  // expo-notifications identifiers
@@ -29,11 +29,10 @@ export type EventTypeOption = 'Birthday' | 'Deadline' | 'Vacation' | 'Milestone'
 export type RepeatOption = 'None' | 'Yearly' | 'Monthly';
 export type ReminderOption = 'None' | '1 day before' | '3 days before' | '1 week before' | 'On the day';
 
-export interface CellData {
-  doy: number;
-  state: 'past' | 'today' | 'future' | 'event';
-  eventColor?: string;
-}
+// Discriminated union: eventColor is guaranteed when state === 'event'
+export type CellData =
+  | { doy: number; state: 'past' | 'today' | 'future' }
+  | { doy: number; state: 'event'; eventColor: string };
 
 export interface LifeCellData {
   doy: number;
