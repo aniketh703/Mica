@@ -11,6 +11,7 @@ import InviteScreen from './src/screens/InviteScreen';
 import SplashScreen from './src/screens/onboarding/SplashScreen';
 import PitchScreen from './src/screens/onboarding/PitchScreen';
 import AuthChoiceScreen from './src/screens/onboarding/AuthChoiceScreen';
+import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import { ThemeProvider } from './src/theme/ThemeContext';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -29,7 +30,7 @@ export default function App() {
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Pitch" component={PitchScreen} />
         <Stack.Screen name="AuthChoice" component={AuthChoiceScreen} />
-        <Stack.Screen name="Onboarding" component={MainScreen} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen
           name="EventDetail"
