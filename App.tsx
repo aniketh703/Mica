@@ -8,6 +8,10 @@ import MainScreen from './src/screens/MainScreen';
 import EventDetailScreen from './src/screens/EventDetailScreen';
 import AddEventScreen from './src/screens/AddEventScreen';
 import InviteScreen from './src/screens/InviteScreen';
+import SplashScreen from './src/screens/onboarding/SplashScreen';
+import PitchScreen from './src/screens/onboarding/PitchScreen';
+import AuthChoiceScreen from './src/screens/onboarding/AuthChoiceScreen';
+import { ThemeProvider } from './src/theme/ThemeContext';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -16,8 +20,16 @@ export default function App() {
   const t = scheme === 'dark' ? midnight : mica;
 
   return (
+    <ThemeProvider>
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: t.background } }}>
+      <Stack.Navigator
+        initialRouteName="Splash"
+        screenOptions={{ headerShown: false, cardStyle: { backgroundColor: t.background } }}
+      >
+        <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="Pitch" component={PitchScreen} />
+        <Stack.Screen name="AuthChoice" component={AuthChoiceScreen} />
+        <Stack.Screen name="Onboarding" component={MainScreen} />
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen
           name="EventDetail"
@@ -39,5 +51,6 @@ export default function App() {
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
+    </ThemeProvider>
   );
 }
