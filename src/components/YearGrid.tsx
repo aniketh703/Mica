@@ -1,34 +1,44 @@
+// src/components/YearGrid.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Theme } from '../theme/palette';
-import { YearProgress } from '../utils/yearProgress';
+import { YearProgress, buildCellData, buildEventDaysMap } from '../utils/yearProgress';
+import { MicaEvent } from '../types';
 
 interface YearGridProps {
   t: Theme;
   yp: YearProgress;
+  events?: MicaEvent[];
 }
 
-export default function YearGrid({ t, yp }: YearGridProps) {
+export default function YearGrid({ t, yp, events = [] }: YearGridProps) {
+  const eventDays = buildEventDaysMap(events, yp.year);
+  const cells = buildCellData(yp, eventDays);
+
   return (
     <View style={styles.container}>
-      {Array.from({ length: yp.totalDays }, (_, i) => {
-        const day = i + 1;
-        const isPast = day < yp.dayOfYear;
-        const isToday = day === yp.dayOfYear;
+      {cells.map((cell) => {
+        let bg: string;
+        let border: { borderWidth: number; borderColor: string } | null = null;
+
+        if (cell.state === 'event') {
+          bg = cell.eventColor;
+        } else if (cell.state === 'past') {
+          bg = t.accent;
+        } else if (cell.state === 'today') {
+          bg = t.surface;
+          border = { borderWidth: 1.5, borderColor: t.accentStrong };
+        } else {
+          bg = t.surfaceMuted;
+        }
+
         return (
           <View
-            key={i}
+            key={cell.doy}
             style={[
               styles.cell,
-              {
-                backgroundColor: isPast
-                  ? t.accent
-                  : isToday
-                  ? t.surface
-                  : t.surfaceMuted,
-                borderWidth: isToday ? 1.5 : 0,
-                borderColor: isToday ? t.accentStrong : undefined,
-              },
+              { backgroundColor: bg },
+              border && { borderWidth: border.borderWidth, borderColor: border.borderColor },
             ]}
           />
         );
