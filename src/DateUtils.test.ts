@@ -1,5 +1,8 @@
 import { DateUtils } from './DateUtils';
 
+// performance.now() polyfill for React Native / Jest environments without DOM
+const performance = { now: () => Date.now() };
+
 describe('DateUtils', () => {
   describe('Core Calculations', () => {
     test('should calculate days remaining in year correctly', () => {

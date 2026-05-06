@@ -3,14 +3,14 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Theme } from '../theme/palette';
 import { RootStackParamList, MicaEvent } from '../types';
-import { getYearProgress, getRemainingCopy, formatDays } from '../utils/yearProgress';
+import { getYearProgress, getRemainingCopy, formatDays, daysUntilIso, dateIsoToShort } from '../utils/yearProgress';
 import YearGrid from '../components/YearGrid';
 
 const EVENTS: MicaEvent[] = [
-  { id: 1, title: "Mum's birthday",   date: 'May 3',   daysLeft: 8,   color: '#C86B5A', type: 'Birthday',    dayOfYear: 123 },
-  { id: 2, title: 'Project deadline', date: 'May 12',  daysLeft: 17,  color: '#9F7A45', type: 'Deadline' },
-  { id: 3, title: 'Summer trip',      date: 'Jun 14',  daysLeft: 50,  color: '#547A76', type: 'Vacation' },
-  { id: 4, title: 'Work anniversary', date: 'Jul 1',   daysLeft: 67,  color: '#D6B98C', type: 'Milestone' },
+  { id: '1', title: "Mum's birthday",   dateIso: '2026-05-03', color: '#C86B5A', type: 'Birthday',  repeats: 'Yearly', reminder: 'None', note: '', dayOfYear: 123, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
+  { id: '2', title: 'Project deadline', dateIso: '2026-05-12', color: '#9F7A45', type: 'Deadline',  repeats: 'None',   reminder: 'None', note: '', dayOfYear: 132, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
+  { id: '3', title: 'Summer trip',      dateIso: '2026-06-14', color: '#547A76', type: 'Vacation',  repeats: 'None',   reminder: 'None', note: '', dayOfYear: 165, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
+  { id: '4', title: 'Work anniversary', dateIso: '2026-07-01', color: '#D6B98C', type: 'Milestone', repeats: 'Yearly', reminder: 'None', note: '', dayOfYear: 182, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
 ];
 
 type Props = {
@@ -45,7 +45,7 @@ export default function HomeScreen({ navigation, t }: Props) {
         {/* Next Up — spotlight card */}
         <TouchableOpacity
           style={[styles.card, styles.cardLarge, { backgroundColor: t.surface, borderColor: t.border }]}
-          onPress={() => navigation.navigate('EventDetail', { event: next })}
+          onPress={() => navigation.navigate('EventDetail', { eventId: next.id })}
           activeOpacity={0.85}
         >
           <View style={[styles.cardBloom, { backgroundColor: next.color }]} />
@@ -56,10 +56,10 @@ export default function HomeScreen({ navigation, t }: Props) {
                 <View style={[styles.colorBar, { backgroundColor: next.color, height: 36 }]} />
                 <Text style={[styles.nextUpTitle, { color: t.text }]}>{next.title}</Text>
               </View>
-              <Text style={[styles.nextUpDate, { color: t.textMuted }]}>{next.date}</Text>
+              <Text style={[styles.nextUpDate, { color: t.textMuted }]}>{dateIsoToShort(next.dateIso)}</Text>
             </View>
             <View style={styles.countdownBlock}>
-              <Text style={[styles.countdownNum, { color: next.color }]}>{next.daysLeft}</Text>
+              <Text style={[styles.countdownNum, { color: next.color }]}>{daysUntilIso(next.dateIso)}</Text>
               <Text style={[styles.countdownLabel, { color: t.textMuted }]}>days</Text>
             </View>
           </View>
@@ -70,7 +70,7 @@ export default function HomeScreen({ navigation, t }: Props) {
                 styles.progressFill,
                 {
                   backgroundColor: next.color,
-                  width: `${100 - (next.daysLeft / 365) * 100}%` as any,
+                  width: `${100 - (daysUntilIso(next.dateIso) / 365) * 100}%` as any,
                 },
               ]}
             />
@@ -110,15 +110,15 @@ export default function HomeScreen({ navigation, t }: Props) {
                 { borderBottomColor: t.border },
                 i < arr.length - 1 && styles.eventRowBorder,
               ]}
-              onPress={() => navigation.navigate('EventDetail', { event: ev })}
+              onPress={() => navigation.navigate('EventDetail', { eventId: ev.id })}
               activeOpacity={0.7}
             >
               <View style={[styles.colorBar, { backgroundColor: ev.color, height: 34 }]} />
               <View style={styles.eventInfo}>
                 <Text style={[styles.eventTitle, { color: t.text }]}>{ev.title}</Text>
-                <Text style={[styles.eventDate, { color: t.textMuted }]}>{ev.date}</Text>
+                <Text style={[styles.eventDate, { color: t.textMuted }]}>{dateIsoToShort(ev.dateIso)}</Text>
               </View>
-              <Text style={[styles.daysLeft, { color: t.textMuted }]}>{formatDays(ev.daysLeft)}</Text>
+              <Text style={[styles.daysLeft, { color: t.textMuted }]}>{formatDays(daysUntilIso(ev.dateIso))}</Text>
             </TouchableOpacity>
           ))}
         </View>

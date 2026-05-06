@@ -1,4 +1,4 @@
-import { NavigationManager, navigationManager } from './NavigationIntegration';
+import { NavigationManager } from './NavigationIntegration';
 
 describe('Navigation Integration', () => {
   let navManager: NavigationManager;
@@ -145,7 +145,7 @@ describe('Navigation Integration', () => {
       
       // Get state before going to background
       const stateBefore = navManager.getNavigationState();
-      const backStackBefore = navManager.getBackStack();
+      navManager.getBackStack(); // capture back stack before background
 
       // App goes to background
       navManager.setBackgroundMode(true);

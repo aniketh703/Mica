@@ -22,13 +22,11 @@ export interface AppInitResult {
 export class StorageManager {
   private data: Map<string, any> = new Map();
   private initialized = false;
-  private initStartTime = 0;
 
   /**
    * Initialize storage with validation
    */
   async initialize(): Promise<boolean> {
-    this.initStartTime = Date.now();
 
     try {
       // Simulate storage initialization

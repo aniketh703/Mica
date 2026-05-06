@@ -66,7 +66,8 @@ export class EventRepository {
   async create(
     data: Omit<MicaEvent, 'id' | 'createdAt' | 'updatedAt' | 'appwriteId'>
   ): Promise<MicaEvent> {
-    const id = crypto.randomUUID();
+    // crypto.randomUUID() is available in React Native 0.73+ via the Hermes engine
+    const id = (globalThis as unknown as { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const now = new Date().toISOString();
     const dayOfYear = dateIsoToDayOfYear(data.dateIso);
 

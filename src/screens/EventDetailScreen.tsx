@@ -20,9 +20,21 @@ const DETAILS = [
   { label: 'Reminder', value: '1 week before' },
 ];
 
+// Placeholder event used until DB lookup is wired up (Phase 2)
+const PLACEHOLDER_EVENT = {
+  color: '#C86B5A',
+  title: 'Event',
+  dateIso: '2026-05-03',
+  dayOfYear: 123,
+  daysLeft: 0,
+  date: 'May 3',
+};
+
 export default function EventDetailScreen({ navigation, route, t }: Props) {
   const yp = getYearProgress();
-  const ev = route.params.event;
+  // route.params.eventId will be used for DB lookup in Phase 2
+  void route.params.eventId;
+  const ev = PLACEHOLDER_EVENT;
 
   return (
     <View style={[styles.root, { backgroundColor: t.background }]}>

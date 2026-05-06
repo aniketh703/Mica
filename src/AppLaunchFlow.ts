@@ -121,13 +121,8 @@ export class AppLaunchManager {
    * Load user profile from storage
    */
   private loadUserProfile(): UserProfile | null {
-    // Simulate loading from storage
-    try {
-      const stored = localStorage?.getItem?.('user_profile');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+    // Simulate loading from storage (localStorage not available in React Native)
+    return null;
   }
 
   /**
@@ -195,7 +190,7 @@ export class AppLaunchManager {
     this.notifyListeners();
 
     // Simulate navigation delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise<void>(resolve => setTimeout(() => resolve(), 100));
   }
 
   /**
@@ -221,7 +216,7 @@ export class AppLaunchManager {
    */
   private async handleRapidNavigation(): Promise<void> {
     // Implement debouncing/throttling
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise<void>(resolve => setTimeout(() => resolve(), 100));
     this.navigationTimestamps = [];
   }
 
@@ -240,7 +235,6 @@ export class AppLaunchManager {
    * Handle device rotation
    */
   handleDeviceRotation(orientation: DeviceOrientation): void {
-    const previousOrientation = this.state.orientation;
     this.state.orientation = orientation;
 
     // Update device info
@@ -292,7 +286,8 @@ export class AppLaunchManager {
    * Check system dark mode preference
    */
   private isSystemDarkMode(): boolean {
-    return window?.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false;
+    // window is not available in React Native
+    return false;
   }
 
   /**

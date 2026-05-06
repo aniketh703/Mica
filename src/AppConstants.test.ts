@@ -12,8 +12,6 @@ import {
   RATE_LIMITS,
   ThemeColors,
   EventCategory,
-  FreeTierLimits,
-  AppConfiguration
 } from './AppConstants';
 
 describe('AppConstants', () => {
@@ -96,7 +94,7 @@ describe('AppConstants', () => {
     test('should have all required properties for each event category', () => {
       const requiredProps: (keyof EventCategory)[] = ['id', 'name', 'description', 'icon', 'color'];
 
-      EVENT_CATEGORIES.forEach((category, index) => {
+      EVENT_CATEGORIES.forEach((category) => {
         requiredProps.forEach(prop => {
           expect(category[prop]).toBeDefined();
           expect(typeof category[prop]).toBe('string');
@@ -430,7 +428,7 @@ describe('AppConstants', () => {
         RATE_LIMITS
       };
 
-      Object.entries(configs).forEach(([name, config]) => {
+      Object.entries(configs).forEach(([, config]) => {
         expect(config).toBeDefined();
         if (typeof config === 'object' && config !== null) {
           expect(Object.keys(config).length).toBeGreaterThan(0);

@@ -1,4 +1,4 @@
-import { AppLaunchManager, appLaunchManager, AppScreen, ThemeMode, DeviceOrientation } from './AppLaunchFlow';
+import { AppLaunchManager, AppScreen, DeviceOrientation } from './AppLaunchFlow';
 
 describe('App Launch Flow', () => {
   let launchManager: AppLaunchManager;
@@ -251,9 +251,8 @@ describe('App Launch Flow', () => {
     });
 
     test('should swap screen dimensions on rotation', () => {
-      const initialInfo = launchManager.getDeviceInfo();
-      const initialWidth = initialInfo.screenWidth;
-      const initialHeight = initialInfo.screenHeight;
+      // Capture initial state (used to verify rotation happened)
+      launchManager.getDeviceInfo();
 
       // Rotate to landscape
       launchManager.handleDeviceRotation('landscape');

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Theme } from '../theme/palette';
 import { RootStackParamList, MicaEvent } from '../types';
-import { formatDays } from '../utils/yearProgress';
+import { formatDays, daysUntilIso, dateIsoToShort } from '../utils/yearProgress';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList>;
@@ -11,12 +11,12 @@ type Props = {
 };
 
 const ALL_EVENTS: MicaEvent[] = [
-  { id: 1, title: "Mum's birthday",   date: 'May 3',   daysLeft: 8,   color: '#C86B5A', type: 'Birthday',  dayOfYear: 123 },
-  { id: 2, title: 'Project deadline', date: 'May 12',  daysLeft: 17,  color: '#9F7A45', type: 'Deadline' },
-  { id: 3, title: 'Summer trip',      date: 'Jun 14',  daysLeft: 50,  color: '#547A76', type: 'Vacation' },
-  { id: 4, title: 'Work anniversary', date: 'Jul 1',   daysLeft: 67,  color: '#D6B98C', type: 'Milestone' },
-  { id: 5, title: 'Annual review',    date: 'Aug 3',   daysLeft: 100, color: '#6B7FA4', type: 'Work' },
-  { id: 6, title: 'Holiday flight',   date: 'Dec 20',  daysLeft: 239, color: '#8A6BA4', type: 'Travel' },
+  { id: '1', title: "Mum's birthday",   dateIso: '2026-05-03', color: '#C86B5A', type: 'Birthday',  repeats: 'Yearly',  reminder: 'None', note: '', dayOfYear: 123, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
+  { id: '2', title: 'Project deadline', dateIso: '2026-05-12', color: '#9F7A45', type: 'Deadline',  repeats: 'None',    reminder: 'None', note: '', dayOfYear: 132, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
+  { id: '3', title: 'Summer trip',      dateIso: '2026-06-14', color: '#547A76', type: 'Vacation',  repeats: 'None',    reminder: 'None', note: '', dayOfYear: 165, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
+  { id: '4', title: 'Work anniversary', dateIso: '2026-07-01', color: '#D6B98C', type: 'Milestone', repeats: 'Yearly',  reminder: 'None', note: '', dayOfYear: 182, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
+  { id: '5', title: 'Annual review',    dateIso: '2026-08-03', color: '#6B7FA4', type: 'Other',     repeats: 'None',    reminder: 'None', note: '', dayOfYear: 215, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
+  { id: '6', title: 'Holiday flight',   dateIso: '2026-12-20', color: '#8A6BA4', type: 'Other',     repeats: 'None',    reminder: 'None', note: '', dayOfYear: 354, notificationIds: [], appwriteId: null, createdAt: '', updatedAt: '' },
 ];
 
 const FILTER_CHIPS = ['All', 'Soon', 'Birthday', 'Work', 'Travel'];
@@ -43,7 +43,7 @@ export default function EventsScreen({ navigation, t }: Props) {
           </View>
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: t.accentStrong }]}
-            onPress={() => navigation.navigate('AddEvent')}
+            onPress={() => navigation.navigate('AddEvent', {})}
           >
             <Text style={styles.addBtnText}>+</Text>
           </TouchableOpacity>
@@ -85,16 +85,16 @@ export default function EventsScreen({ navigation, t }: Props) {
                 { borderBottomColor: t.border },
                 i < ALL_EVENTS.length - 1 && styles.eventRowBorder,
               ]}
-              onPress={() => navigation.navigate('EventDetail', { event: ev })}
+              onPress={() => navigation.navigate('EventDetail', { eventId: ev.id })}
               activeOpacity={0.7}
             >
               <View style={[styles.colorBar, { backgroundColor: ev.color }]} />
               <View style={styles.eventInfo}>
                 <Text style={[styles.eventTitle, { color: t.text }]}>{ev.title}</Text>
-                <Text style={[styles.eventDate, { color: t.textMuted }]}>{ev.date}</Text>
+                <Text style={[styles.eventDate, { color: t.textMuted }]}>{dateIsoToShort(ev.dateIso)}</Text>
               </View>
               <View style={styles.eventRight}>
-                <Text style={[styles.daysLeft, { color: t.text }]}>{formatDays(ev.daysLeft)}</Text>
+                <Text style={[styles.daysLeft, { color: t.text }]}>{formatDays(daysUntilIso(ev.dateIso))}</Text>
                 <Text style={[styles.chevron, { color: t.textMuted }]}>›</Text>
               </View>
             </TouchableOpacity>
