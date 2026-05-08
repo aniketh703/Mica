@@ -8,6 +8,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useSQLiteContext } from 'expo-sqlite';
 import { useTheme } from '../../theme/ThemeContext';
 import { RootStackParamList } from '../../types';
 
@@ -28,6 +29,7 @@ const DOT_GRID: DotState[][] = [
 
 export default function SplashScreen({ navigation }: Props) {
   const t = useTheme();
+  const db = useSQLiteContext();
   const spinValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -40,14 +42,32 @@ export default function SplashScreen({ navigation }: Props) {
       }),
     ).start();
 
-    // TODO: check onboarding flag via EventRepository once DB is ready
-    // For now always navigate to Pitch after 1500ms
-    const timer = setTimeout(() => {
-      navigation.replace('Pitch');
-    }, 1500);
+    // Check onboarding flag and navigate accordingly after splash duration
+    const MIN_SPLASH_MS = 1500;
+    const startedAt = Date.now();
 
-    return () => clearTimeout(timer);
-  }, [navigation, spinValue]);
+    async function checkAndNavigate() {
+      let onboardingComplete = false;
+      try {
+        const row = await db.getFirstAsync<{ value: string }>(
+          `SELECT value FROM settings WHERE key = 'onboardingComplete' LIMIT 1`,
+        );
+        onboardingComplete = row?.value === 'true';
+      } catch {
+        // settings table may not exist yet on first launch — treat as new user
+        onboardingComplete = false;
+      }
+
+      // Ensure we always show the splash for at least MIN_SPLASH_MS
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
+      setTimeout(() => {
+        navigation.replace(onboardingComplete ? 'Main' : 'Pitch');
+      }, remaining);
+    }
+
+    checkAndNavigate();
+  }, [navigation, spinValue, db]);
 
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
