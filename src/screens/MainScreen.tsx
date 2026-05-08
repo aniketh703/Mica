@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { mica, midnight } from '../theme/palette';
+import { useTheme } from '../theme/ThemeContext';
+import { PremiumProvider } from '../context/PremiumContext';
 import { TabName, RootStackParamList } from '../types';
 import TabBar from '../components/TabBar';
 import HomeScreen from './HomeScreen';
@@ -14,21 +15,20 @@ type Props = {
 
 export default function MainScreen({ navigation }: Props) {
   const [activeTab, setActiveTab] = useState<TabName>('home');
-  const scheme = useColorScheme();
-  const t = scheme === 'dark' ? midnight : mica;
+  const t = useTheme();
 
   return (
-    <View style={styles.root}>
-      {activeTab === 'home' && <HomeScreen navigation={navigation} t={t} />}
-      {activeTab === 'events' && <EventsScreen navigation={navigation} t={t} />}
-      {activeTab === 'settings' && <SettingsScreen navigation={navigation} t={t} />}
-      <TabBar activeTab={activeTab} onTabChange={setActiveTab} t={t} />
-    </View>
+    <PremiumProvider>
+      <View style={[styles.root, { backgroundColor: t.background }]}>
+        {activeTab === 'home' && <HomeScreen navigation={navigation} />}
+        {activeTab === 'events' && <EventsScreen navigation={navigation} />}
+        {activeTab === 'settings' && <SettingsScreen navigation={navigation} />}
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} t={t} />
+      </View>
+    </PremiumProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
+  root: { flex: 1 },
 });
