@@ -2,6 +2,7 @@ module.exports = {
   preset: 'react-native',
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
   testMatch: ['**/__tests__/**/*.test.ts?(x)'],
+  testPathIgnorePatterns: ['/node_modules/', '/.claude/worktrees/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transformIgnorePatterns: [
     'node_modules/(?!(react-native|@react-native|@react-navigation)/)',
@@ -24,7 +25,7 @@ module.exports = {
     '!src/**/__tests__/**',
     '!src/**/index.ts',
   ],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 80,
       functions: 80,
