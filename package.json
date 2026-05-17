@@ -1,7 +1,7 @@
 {
-  "name": "date-utils-tests",
+  "name": "mica",
   "version": "1.0.0",
-  "description": "Comprehensive test suite for Date Utility Functions",
+  "description": "Mica — a calm, personal calendar app",
   "scripts": {
     "start": "expo start",
     "test": "jest",
