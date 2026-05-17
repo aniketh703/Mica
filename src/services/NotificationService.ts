@@ -1,25 +1,68 @@
 // src/services/NotificationService.ts
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { MicaEvent, ReminderOption } from '../types';
 
-// Configure how notifications appear when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+type NotificationsModule = typeof import('expo-notifications');
+
+let notificationsModulePromise: Promise<NotificationsModule> | null = null;
+let notificationHandlerConfigured = false;
+
+function isExpoGo(): boolean {
+  return Constants.appOwnership === 'expo' || Constants.executionEnvironment === 'storeClient';
+}
+
+function isNotificationsSupported(): boolean {
+  return !isExpoGo();
+}
+
+async function getNotificationsModule(): Promise<NotificationsModule | null> {
+  if (!isNotificationsSupported()) {
+    return null;
+  }
+
+  if (!notificationsModulePromise) {
+    notificationsModulePromise = import('expo-notifications');
+  }
+
+  return notificationsModulePromise;
+}
+
+async function configureNotificationHandler(): Promise<void> {
+  const Notifications = await getNotificationsModule();
+  if (!Notifications || notificationHandlerConfigured) {
+    return;
+  }
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+
+  notificationHandlerConfigured = true;
+}
 
 /** Request OS permission. Returns true if granted. */
 export async function requestNotificationPermission(): Promise<boolean> {
+  if (!isNotificationsSupported()) {
+    return false;
+  }
+
   if (Platform.OS === 'android' && Platform.Version < 33) {
     // Android < 13: permission granted by default
     return true;
   }
+
+  const Notifications = await getNotificationsModule();
+  if (!Notifications) {
+    return false;
+  }
+
   const { status } = await Notifications.requestPermissionsAsync();
   return status === 'granted';
 }
@@ -37,6 +80,10 @@ function reminderToDayOffset(reminder: ReminderOption): number | null {
 
 /** Schedule (or reschedule) notifications for one event. Returns notification IDs. */
 export async function scheduleEventNotifications(event: MicaEvent): Promise<string[]> {
+  if (!isNotificationsSupported()) {
+    return [];
+  }
+
   // Cancel existing notifications for this event first
   await cancelEventNotifications(event.notificationIds);
 
@@ -58,6 +105,11 @@ export async function scheduleEventNotifications(event: MicaEvent): Promise<stri
       ? `${event.title} is today!`
       : `${event.title} is coming up — ${Math.abs(offset)} day${Math.abs(offset) !== 1 ? 's' : ''} to go.`;
 
+  const Notifications = await getNotificationsModule();
+  if (!Notifications) {
+    return [];
+  }
+
   const id = await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Mica',
@@ -75,17 +127,34 @@ export async function scheduleEventNotifications(event: MicaEvent): Promise<stri
 
 /** Cancel all notification IDs for an event */
 export async function cancelEventNotifications(ids: string[]): Promise<void> {
+  const Notifications = await getNotificationsModule();
+  if (!Notifications) {
+    return;
+  }
+
   await Promise.all(ids.map(id => Notifications.cancelScheduledNotificationAsync(id)));
 }
 
 /** Cancel all scheduled notifications (used when toggling notifications off) */
 export async function cancelAllNotifications(): Promise<void> {
+  const Notifications = await getNotificationsModule();
+  if (!Notifications) {
+    return;
+  }
+
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
 /** Set up Android notification channel (call once on app start) */
 export async function setupAndroidChannel(): Promise<void> {
   if (Platform.OS === 'android') {
+    const Notifications = await getNotificationsModule();
+    if (!Notifications) {
+      return;
+    }
+
+    await configureNotificationHandler();
+
     await Notifications.setNotificationChannelAsync('mica-events', {
       name: 'Event Reminders',
       importance: Notifications.AndroidImportance.DEFAULT,
