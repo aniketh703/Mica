@@ -1,10 +1,14 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as H from '../utils/haptics';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme, useThemeMode, ThemeMode } from '../theme/ThemeContext';
 import { useSettings } from '../hooks/useSettings';
 import { usePremium, FREE_EVENT_LIMIT } from '../context/PremiumContext';
 import { RootStackParamList } from '../types';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList>;
@@ -40,7 +44,7 @@ function Toggle({
       style={[styles.toggleTrack, { backgroundColor: value ? activeColor : inactiveColor }]}
       activeOpacity={0.85}
     >
-      <View style={[styles.toggleThumb, { left: value ? 19 : 2.5 }]} />
+      <View style={[styles.toggleThumb, { left: value ? 21 : 3 }]} />
     </TouchableOpacity>
   );
 }
@@ -101,7 +105,12 @@ export default function SettingsScreen({ navigation }: Props) {
 
         {/* Appearance card */}
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Appearance</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={[styles.iconBadge, { backgroundColor: t.accentSoft }]}>
+              <Ionicons name="color-palette-outline" size={16} color={t.accentStrong} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>Appearance</Text>
+          </View>
           <Text style={[styles.themeLabel, { color: t.textMuted }]}>THEME</Text>
           <View style={styles.themeRow}>
             {THEME_OPTIONS.map(opt => {
@@ -120,9 +129,7 @@ export default function SettingsScreen({ navigation }: Props) {
                       : { backgroundColor: t.surfaceMuted },
                   ]}
                 >
-                  <Text
-                    style={[styles.themeBtnText, { color: isActive ? '#FFF7EC' : t.textMuted }]}
-                  >
+                  <Text style={[styles.themeBtnText, { color: isActive ? '#FFF7EC' : t.textMuted }]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
@@ -133,14 +140,43 @@ export default function SettingsScreen({ navigation }: Props) {
 
         {/* Reminders card */}
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Reminders</Text>
-          <View style={styles.reminderRow}>
-            <Text style={[styles.reminderLabel, { color: t.text }]}>Daily nudge</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={[styles.iconBadge, { backgroundColor: t.accentSoft }]}>
+              <Ionicons name="notifications-outline" size={16} color={t.accentStrong} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>Reminders & Feedback</Text>
+          </View>
+
+          {/* Daily nudge */}
+          <View style={[styles.settingRow, styles.settingRowBorder, { borderBottomColor: t.border }]}>
+            <View style={[styles.iconBadge, { backgroundColor: t.surfaceMuted }]}>
+              <Ionicons name="alarm-outline" size={16} color={t.textMuted} />
+            </View>
+            <Text style={[styles.settingLabel, { color: t.text, flex: 1 }]}>Daily nudge</Text>
             <Toggle
               value={settings.notificationsEnabled}
-              onToggle={() =>
-                updateSetting('notificationsEnabled', !settings.notificationsEnabled)
-              }
+              onToggle={() => {
+                H.selectionAsync();
+                updateSetting('notificationsEnabled', !settings.notificationsEnabled);
+              }}
+              activeColor={t.accentStrong}
+              inactiveColor={t.surfaceMuted}
+            />
+          </View>
+
+          {/* Haptic feedback */}
+          <View style={styles.settingRow}>
+            <View style={[styles.iconBadge, { backgroundColor: t.surfaceMuted }]}>
+              <Ionicons name="pulse-outline" size={16} color={t.textMuted} />
+            </View>
+            <Text style={[styles.settingLabel, { color: t.text, flex: 1 }]}>Haptic feedback</Text>
+            <Toggle
+              value={settings.hapticsEnabled}
+              onToggle={() => {
+                // Fire one last haptic before potentially disabling them
+                if (settings.hapticsEnabled) H.selectionAsync();
+                updateSetting('hapticsEnabled', !settings.hapticsEnabled);
+              }}
               activeColor={t.accentStrong}
               inactiveColor={t.surfaceMuted}
             />
@@ -149,31 +185,44 @@ export default function SettingsScreen({ navigation }: Props) {
 
         {/* Invite */}
         <TouchableOpacity
-          style={[styles.card, styles.inviteRow, { backgroundColor: t.surface, borderColor: t.border }]}
+          style={[styles.card, styles.settingRow, { backgroundColor: t.surface, borderColor: t.border }]}
           onPress={() => navigation.navigate('Invite')}
         >
-          <Text style={[styles.reminderLabel, { color: t.text }]}>Invite a friend</Text>
-          <Text style={[{ color: t.accentStrong, fontSize: 18 }]}>›</Text>
+          <View style={[styles.iconBadge, { backgroundColor: t.accentSoft }]}>
+            <Ionicons name="person-add-outline" size={16} color={t.accentStrong} />
+          </View>
+          <Text style={[styles.settingLabel, { color: t.text, flex: 1 }]}>Invite a friend</Text>
+          <Ionicons name="chevron-forward" size={18} color={t.textMuted} />
         </TouchableOpacity>
 
         {/* About card */}
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>About</Text>
-          {[
-            { label: 'Version', value: '1.0.0', onPress: undefined },
+          <View style={styles.sectionHeaderRow}>
+            <View style={[styles.iconBadge, { backgroundColor: t.accentSoft }]}>
+              <Ionicons name="information-circle-outline" size={16} color={t.accentStrong} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>About</Text>
+          </View>
+          {([
             {
+              icon: 'barcode-outline' as IoniconName,
+              label: 'Version',
+              value: '1.0.0',
+              onPress: undefined as (() => void) | undefined,
+            },
+            {
+              icon: 'shield-checkmark-outline' as IoniconName,
               label: 'Privacy Policy',
-              value: '›',
-              onPress: () =>
-                Alert.alert('Coming soon', 'Privacy policy will be at mica.app/privacy'),
+              value: undefined,
+              onPress: () => Alert.alert('Coming soon', 'Privacy policy will be at mica.app/privacy'),
             },
             {
+              icon: 'star-outline' as IoniconName,
               label: 'Rate Mica',
-              value: '›',
-              onPress: () =>
-                Alert.alert('Coming soon', 'Rating will be available on Play Store.'),
+              value: undefined,
+              onPress: () => Alert.alert('Coming soon', 'Rating will be available on Play Store.'),
             },
-          ].map((row, i, arr) => (
+          ] as const).map((row, i, arr) => (
             <TouchableOpacity
               key={row.label}
               disabled={!row.onPress}
@@ -184,8 +233,14 @@ export default function SettingsScreen({ navigation }: Props) {
                 i < arr.length - 1 && styles.aboutRowBorder,
               ]}
             >
-              <Text style={[styles.reminderLabel, { color: t.textMuted }]}>{row.label}</Text>
-              <Text style={[styles.aboutValue, { color: t.text }]}>{row.value}</Text>
+              <View style={[styles.iconBadge, { backgroundColor: t.surfaceMuted }]}>
+                <Ionicons name={row.icon} size={15} color={t.textMuted} />
+              </View>
+              <Text style={[styles.settingLabel, { color: t.textMuted, flex: 1 }]}>{row.label}</Text>
+              {row.value
+                ? <Text style={[styles.aboutValue, { color: t.text }]}>{row.value}</Text>
+                : <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
+              }
             </TouchableOpacity>
           ))}
         </View>
@@ -208,26 +263,31 @@ const styles = StyleSheet.create({
   cardBloom: { position: 'absolute', width: 200, height: 200, borderRadius: 100, top: -80, right: -60, opacity: 0.38 },
   eyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 2.5 },
   premiumTitle: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5, marginTop: -4 },
-  premiumSubtitle: { fontSize: 13, marginTop: -4 },
-  featureList: { gap: 8 },
+  premiumSubtitle: { fontSize: 15, marginTop: -4 },
+  featureList: { gap: 10 },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   featureDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
-  featureText: { fontSize: 14 },
-  usageLine: { fontSize: 12, marginTop: -4 },
-  unlockBtn: { minHeight: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  unlockBtnText: { color: '#FFF7EC', fontSize: 15, fontWeight: '700' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: -2 },
+  featureText: { fontSize: 15 },
+  usageLine: { fontSize: 13, marginTop: -4 },
+  unlockBtn: { minHeight: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  unlockBtnText: { color: '#FFF7EC', fontSize: 16, fontWeight: '700' },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: '700' },
   themeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: -4 },
   themeRow: { flexDirection: 'row', gap: 8 },
-  themeBtn: { flex: 1, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  themeBtnText: { fontSize: 13, fontWeight: '600' },
-  reminderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  reminderLabel: { fontSize: 14 },
-  inviteRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  toggleTrack: { width: 42, height: 25, borderRadius: 12.5, position: 'relative' },
+  themeBtn: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  themeBtnText: { fontSize: 14, fontWeight: '600' },
+  iconBadge: {
+    width: 32, height: 32, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  settingRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 },
+  settingRowBorder: { borderBottomWidth: 1, paddingBottom: 12, marginBottom: 4 },
+  settingLabel: { fontSize: 15, fontWeight: '500' },
+  toggleTrack: { width: 44, height: 26, borderRadius: 13, position: 'relative' },
   toggleThumb: {
     position: 'absolute',
-    top: 2.5,
+    top: 3,
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -238,8 +298,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  aboutRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 13 },
+  aboutRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, minHeight: 52 },
   aboutRowBorder: { borderBottomWidth: 1 },
-  aboutValue: { fontSize: 14 },
+  aboutValue: { fontSize: 15 },
   bottomPad: { height: 8 },
 });

@@ -1,14 +1,14 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Share } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../theme/ThemeContext';
+import { useSettings } from '../hooks/useSettings';
 import { RootStackParamList } from '../types';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, 'Invite'>;
 };
-
-const REFERRAL_CODE = 'ALEX-MICA-2026';
 
 const FRIENDS = [
   { initials: 'JR', name: 'Jamie R.', status: 'Joined', color: '#547A76' },
@@ -24,6 +24,29 @@ const SHARE_BTNS = [
 
 export default function InviteScreen({ navigation }: Props) {
   const t = useTheme();
+  const { settings } = useSettings();
+  const [copied, setCopied] = useState(false);
+
+  // Build referral code from the user's name, falling back to a generic slug
+  const userSlug = (settings.userName || 'YOU').toUpperCase().replace(/\s+/g, '-').slice(0, 12);
+  const REFERRAL_CODE = `${userSlug}-MICA-${new Date().getFullYear()}`;
+
+  function handleCopy() {
+    Clipboard.setString(REFERRAL_CODE);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleShare() {
+    try {
+      await Share.share({
+        message: `Join me on Mica — a personal countdown app. Use my code ${REFERRAL_CODE} to get started.\nhttps://mica.app`,
+        title: 'Try Mica',
+      });
+    } catch {
+      // user dismissed share sheet — no-op
+    }
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: t.background }]}>
@@ -55,9 +78,13 @@ export default function InviteScreen({ navigation }: Props) {
           <Text style={[styles.eyebrow, { color: t.textMuted }]}>YOUR REFERRAL CODE</Text>
           <View style={[styles.codeBox, { backgroundColor: t.surfaceMuted, borderColor: t.border }]}>
             <Text style={[styles.codeText, { color: t.accentStrong }]}>{REFERRAL_CODE}</Text>
-            <View style={[styles.copyBtn, { backgroundColor: t.accentStrong }]}>
-              <Text style={styles.copyBtnText}>Copy</Text>
-            </View>
+            <TouchableOpacity
+              style={[styles.copyBtn, { backgroundColor: copied ? t.success : t.accentStrong }]}
+              onPress={handleCopy}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.copyBtnText}>{copied ? 'Copied!' : 'Copy'}</Text>
+            </TouchableOpacity>
           </View>
           <Text style={[styles.codeCaption, { color: t.textMuted }]}>
             Your friend gets Mica free for 30 days. You unlock a premium month when they join.
@@ -69,6 +96,7 @@ export default function InviteScreen({ navigation }: Props) {
           {SHARE_BTNS.map(btn => (
             <TouchableOpacity
               key={btn.label}
+              onPress={btn.primary ? handleShare : undefined}
               style={[
                 styles.shareBtn,
                 { flex: btn.flex },

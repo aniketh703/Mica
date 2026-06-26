@@ -8,12 +8,14 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as H from '../utils/haptics';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { useEventRepository } from '../hooks/useEventRepository';
 import { RootStackParamList, MicaEvent } from '../types';
-import { getYearProgress, daysUntilIso, dateIsoToDisplay } from '../utils/yearProgress';
+import { getYearProgress, dateIsoToDisplay, nextOccurrenceIso, effectiveDaysUntil, dateIsoToDayOfYear } from '../utils/yearProgress';
 import { cancelEventNotifications } from '../services/NotificationService';
 import LifeCalendarGrid from '../components/LifeCalendarGrid';
 
@@ -39,6 +41,7 @@ export default function EventDetailScreen({ navigation, route }: Props) {
 
   function handleDelete() {
     if (!event) return;
+    H.impactAsync(H.ImpactFeedbackStyle.Medium);
     Alert.alert('Delete event', `Delete "${event.title}"? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -47,6 +50,7 @@ export default function EventDetailScreen({ navigation, route }: Props) {
         onPress: async () => {
           await repo.delete(event.id);
           await cancelEventNotifications(event.notificationIds);
+          H.notificationAsync(H.NotificationFeedbackType.Success);
           navigation.goBack();
         },
       },
@@ -72,12 +76,19 @@ export default function EventDetailScreen({ navigation, route }: Props) {
     );
   }
 
-  const daysLeft = Math.max(0, daysUntilIso(event.dateIso));
+  // Use the next occurrence for countdown + life grid; store the canonical date in Details.
+  const nextIso   = nextOccurrenceIso(event);
+  const daysLeft  = Math.max(0, effectiveDaysUntil(event));
+  // dayOfYear of the next occurrence — tells the life grid where to mark the event dot
+  const nextDayOfYear = dateIsoToDayOfYear(nextIso);
+
   const DETAILS = [
-    { label: 'Type', value: event.type },
-    { label: 'Date', value: dateIsoToDisplay(event.dateIso) },
+    { label: 'Type',    value: event.type },
+    // For repeating events, show the next occurrence date. For one-time events,
+    // show the stored date (which may be in the past).
+    { label: 'Date',    value: dateIsoToDisplay(nextIso) },
     { label: 'Repeats', value: event.repeats },
-    { label: 'Reminder', value: event.reminder },
+    { label: 'Reminder',value: event.reminder },
   ];
 
   return (
@@ -90,8 +101,8 @@ export default function EventDetailScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {/* Back */}
-        <TouchableOpacity style={styles.backRow} onPress={() => navigation.goBack()}>
-          <Text style={[styles.backChevron, { color: t.accentStrong }]}>‹</Text>
+        <TouchableOpacity style={styles.backRow} onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="chevron-back" size={20} color={t.accentStrong} />
           <Text style={[styles.backText, { color: t.accentStrong }]}>Events</Text>
         </TouchableOpacity>
 
@@ -101,7 +112,7 @@ export default function EventDetailScreen({ navigation, route }: Props) {
           <View style={{ flex: 1 }}>
             <Text style={[styles.titleText, { color: t.text }]}>{event.title}</Text>
             <Text style={[styles.titleDate, { color: t.textMuted }]}>
-              {dateIsoToDisplay(event.dateIso)}
+              {dateIsoToDisplay(nextIso)}
             </Text>
           </View>
         </View>
@@ -115,7 +126,7 @@ export default function EventDetailScreen({ navigation, route }: Props) {
           <LifeCalendarGrid
             t={t}
             yp={yp}
-            eventDayOfYear={event.dayOfYear}
+            eventDayOfYear={nextDayOfYear}
             eventColor={event.color}
           />
         </View>
@@ -186,13 +197,12 @@ const styles = StyleSheet.create({
   bloom: { position: 'absolute', width: 260, height: 260, borderRadius: 130, top: -80, right: -100, opacity: 0.09 },
   scroll: { flex: 1 },
   content: { padding: 22, paddingTop: 56, gap: 16 },
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  backChevron: { fontSize: 24, fontWeight: '400', lineHeight: 24 },
-  backText: { fontSize: 15, fontWeight: '500' },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 },
+  backText: { fontSize: 16, fontWeight: '500' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 4 },
   titleBar: { width: 12, height: 52, borderRadius: 999, flexShrink: 0 },
   titleText: { fontSize: 30, fontWeight: '800', letterSpacing: -0.8, lineHeight: 34 },
-  titleDate: { fontSize: 14, marginTop: 3 },
+  titleDate: { fontSize: 15, marginTop: 3 },
   card: { borderRadius: 24, padding: 18, borderWidth: 1, overflow: 'hidden', position: 'relative', gap: 12 },
   cardBloom: { position: 'absolute', width: 180, height: 180, borderRadius: 90, top: -70, right: -50, opacity: 0.35 },
   eyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 2.2 },
@@ -201,16 +211,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   countdownBloom: { position: 'absolute', width: 160, height: 160, borderRadius: 80, top: -60, right: -50, opacity: 0.1 },
-  countdownSub: { fontSize: 14, marginTop: 4 },
+  countdownSub: { fontSize: 15, marginTop: 4 },
   countdownNum: { fontSize: 64, fontWeight: '800', letterSpacing: -2, lineHeight: 64 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, minHeight: 48 },
   detailRowBorder: { borderBottomWidth: 1 },
-  detailLabel: { fontSize: 14 },
-  detailValue: { fontSize: 14, fontWeight: '600' },
-  noteText: { fontSize: 14, lineHeight: 20 },
+  detailLabel: { fontSize: 15 },
+  detailValue: { fontSize: 15, fontWeight: '600' },
+  noteText: { fontSize: 15, lineHeight: 22 },
   actionsRow: { flexDirection: 'row', gap: 10 },
-  actionBtn: { flex: 1, height: 46, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  actionBtnText: { fontSize: 14, fontWeight: '600' },
+  actionBtn: { flex: 1, height: 52, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  actionBtnText: { fontSize: 15, fontWeight: '600' },
   bottomPad: { height: 24 },
 });

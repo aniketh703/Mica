@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
@@ -8,14 +9,20 @@ import {
   Alert,
   StyleSheet,
   Platform,
+  LayoutAnimation,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as H from '../utils/haptics';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useTheme } from '../theme/ThemeContext';
+import { Theme } from '../theme/palette';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useEventRepository } from '../hooks/useEventRepository';
 import { RootStackParamList, EventTypeOption, RepeatOption, ReminderOption } from '../types';
 import { dateIsoToDisplay } from '../utils/yearProgress';
+import { MOTION_DURATION, motionEasing } from '../utils/motion';
 import {
   scheduleEventNotifications,
   cancelEventNotifications,
@@ -27,6 +34,15 @@ type Props = {
 };
 
 const EVENT_TYPES: EventTypeOption[] = ['Birthday', 'Deadline', 'Vacation', 'Milestone', 'Other'];
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+const EVENT_TYPE_ICONS: Record<EventTypeOption, IoniconName> = {
+  Birthday: 'gift-outline',
+  Deadline: 'timer-outline',
+  Vacation: 'airplane-outline',
+  Milestone: 'trophy-outline',
+  Other:    'ellipsis-horizontal-circle-outline',
+};
 const COLOR_SWATCHES = ['#C86B5A', '#9F7A45', '#547A76', '#D6B98C', '#6B7FA4', '#8A6BA4'];
 const REPEAT_OPTIONS: RepeatOption[] = ['None', 'Yearly', 'Monthly'];
 const REMINDER_OPTIONS: ReminderOption[] = [
@@ -36,6 +52,47 @@ const REMINDER_OPTIONS: ReminderOption[] = [
   '3 days before',
   '1 week before',
 ];
+
+function ColorSwatch({
+  c,
+  isSelected,
+  onPress,
+  reduceMotion,
+  t,
+}: {
+  c: string;
+  isSelected: boolean;
+  onPress: () => void;
+  reduceMotion: boolean;
+  t: Theme;
+}) {
+  const [scale] = useState(() => new Animated.Value(1));
+
+  function handlePress() {
+    onPress();
+    if (!reduceMotion) {
+      scale.setValue(1);
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.08, duration: 75, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 75, useNativeDriver: true }),
+      ]).start();
+    }
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      style={[
+        styles.swatchOuter,
+        isSelected
+          ? { borderColor: t.accentStrong, borderWidth: 2.5 }
+          : { borderColor: 'transparent', borderWidth: 2.5 },
+      ]}
+    >
+      <Animated.View style={[styles.swatch, { backgroundColor: c, transform: [{ scale }] }]} />
+    </TouchableOpacity>
+  );
+}
 
 function defaultDateIso(): string {
   const d = new Date();
@@ -50,6 +107,8 @@ function dateToIso(date: Date): string {
 export default function AddEventScreen({ navigation, route }: Props) {
   const t = useTheme();
   const repo = useEventRepository();
+  const reduceMotion = useReducedMotion();
+  const [pickerOpacity] = useState(() => new Animated.Value(1));
 
   const editId = route.params?.eventId ?? null;
   const isEdit = !!editId;
@@ -97,6 +156,45 @@ export default function AddEventScreen({ navigation, route }: Props) {
     if (date) setDateIso(dateToIso(date));
   }
 
+  function showPicker() {
+    if (showDatePicker) return;
+
+    if (Platform.OS === 'ios' && !reduceMotion) {
+      LayoutAnimation.configureNext({
+        duration: MOTION_DURATION.picker,
+        update: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+        },
+      });
+    }
+
+    setShowDatePicker(true);
+  }
+
+  useEffect(() => {
+    if (!showDatePicker || Platform.OS !== 'ios') return;
+
+    if (reduceMotion) {
+      pickerOpacity.stopAnimation();
+      pickerOpacity.setValue(1);
+      return;
+    }
+
+    pickerOpacity.setValue(0);
+    const animation = Animated.timing(pickerOpacity, {
+      toValue: 1,
+      duration: MOTION_DURATION.picker,
+      easing: motionEasing,
+      useNativeDriver: true,
+    });
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [pickerOpacity, reduceMotion, showDatePicker]);
+
   async function handleSave() {
     if (!title.trim() || saving) return;
     setSaving(true);
@@ -129,8 +227,10 @@ export default function AddEventScreen({ navigation, route }: Props) {
         const ids = await scheduleEventNotifications(ev);
         if (ids.length > 0) await repo.update(ev.id, { notificationIds: ids });
       }
+      H.notificationAsync(H.NotificationFeedbackType.Success);
       navigation.goBack();
     } catch {
+      H.notificationAsync(H.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Could not save event. Please try again.');
     } finally {
       setSaving(false);
@@ -186,10 +286,14 @@ export default function AddEventScreen({ navigation, route }: Props) {
           <View style={styles.chipsRow}>
             {EVENT_TYPES.map(tp => {
               const isSelected = tp === type;
+              const chipColor = isSelected ? '#FFF7EC' : t.textMuted;
               return (
                 <TouchableOpacity
                   key={tp}
-                  onPress={() => setType(tp)}
+                  onPress={() => {
+                    H.selectionAsync();
+                    setType(tp);
+                  }}
                   style={[
                     styles.chip,
                     isSelected
@@ -197,9 +301,8 @@ export default function AddEventScreen({ navigation, route }: Props) {
                       : { backgroundColor: t.surface, borderWidth: 1, borderColor: t.border },
                   ]}
                 >
-                  <Text style={[styles.chipText, { color: isSelected ? '#FFF7EC' : t.textMuted }]}>
-                    {tp}
-                  </Text>
+                  <Ionicons name={EVENT_TYPE_ICONS[tp]} size={15} color={chipColor} />
+                  <Text style={[styles.chipText, { color: chipColor }]}>{tp}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -211,7 +314,7 @@ export default function AddEventScreen({ navigation, route }: Props) {
           {/* Date row */}
           <TouchableOpacity
             style={[styles.whenRow, styles.whenRowBorder, { borderBottomColor: t.border }]}
-            onPress={() => setShowDatePicker(true)}
+            onPress={showPicker}
           >
             <Text style={[styles.whenLabel, { color: t.textMuted }]}>Date</Text>
             <View style={styles.whenRight}>
@@ -243,11 +346,22 @@ export default function AddEventScreen({ navigation, route }: Props) {
         </View>
 
         {/* Date picker */}
-        {showDatePicker && (
+        {showDatePicker && Platform.OS === 'ios' && (
+          <Animated.View style={{ opacity: pickerOpacity }}>
+            <DateTimePicker
+              value={pickerDate}
+              mode="date"
+              display="default"
+              onChange={onDateChange}
+              minimumDate={new Date()}
+            />
+          </Animated.View>
+        )}
+        {showDatePicker && Platform.OS !== 'ios' && (
           <DateTimePicker
             value={pickerDate}
             mode="date"
-            display={Platform.OS === 'android' ? 'spinner' : 'default'}
+            display="spinner"
             onChange={onDateChange}
             minimumDate={new Date()}
           />
@@ -258,18 +372,17 @@ export default function AddEventScreen({ navigation, route }: Props) {
           <Text style={[styles.fieldLabel, { color: t.textMuted }]}>COLOR</Text>
           <View style={styles.swatchRow}>
             {COLOR_SWATCHES.map(c => (
-              <TouchableOpacity
+              <ColorSwatch
                 key={c}
-                onPress={() => setColor(c)}
-                style={[
-                  styles.swatchOuter,
-                  color === c
-                    ? { borderColor: t.accentStrong, borderWidth: 2.5 }
-                    : { borderColor: 'transparent', borderWidth: 2.5 },
-                ]}
-              >
-                <View style={[styles.swatch, { backgroundColor: c }]} />
-              </TouchableOpacity>
+                c={c}
+                isSelected={color === c}
+                onPress={() => {
+                  H.selectionAsync();
+                  setColor(c);
+                }}
+                reduceMotion={reduceMotion}
+                t={t}
+              />
             ))}
           </View>
         </View>
@@ -314,20 +427,20 @@ const styles = StyleSheet.create({
   card: { borderRadius: 20, padding: 18, borderWidth: 1, overflow: 'hidden', position: 'relative', gap: 12 },
   cardBloom: { position: 'absolute', width: 180, height: 180, borderRadius: 90, top: -70, right: -50, opacity: 0.38 },
   fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 2 },
-  nameInput: { fontSize: 18, fontWeight: '600', paddingVertical: 8, borderBottomWidth: 2 },
+  nameInput: { fontSize: 18, fontWeight: '600', paddingVertical: 10, borderBottomWidth: 2 },
   chipsRow: { flexDirection: 'row', gap: 8 },
-  chip: { paddingVertical: 7, paddingHorizontal: 16, borderRadius: 999, height: 36, alignItems: 'center', justifyContent: 'center' },
-  chipText: { fontSize: 13, fontWeight: '600' },
+  chip: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 999, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  chipText: { fontSize: 14, fontWeight: '600' },
   whenCard: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
-  whenRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 18 },
+  whenRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 18, minHeight: 52 },
   whenRowBorder: { borderBottomWidth: 1 },
-  whenLabel: { fontSize: 14 },
+  whenLabel: { fontSize: 16 },
   whenRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  whenValue: { fontSize: 14, fontWeight: '600' },
+  whenValue: { fontSize: 16, fontWeight: '600' },
   chevron: { fontSize: 18, lineHeight: 18 },
-  swatchRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  swatchOuter: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  swatch: { width: 30, height: 30, borderRadius: 15 },
-  noteInput: { fontSize: 14, minHeight: 80, fontStyle: 'italic' },
+  swatchRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  swatchOuter: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  swatch: { width: 34, height: 34, borderRadius: 17 },
+  noteInput: { fontSize: 15, minHeight: 80, fontStyle: 'italic' },
   bottomPad: { height: 24 },
 });
