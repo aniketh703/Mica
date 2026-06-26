@@ -1,6 +1,7 @@
 // src/screens/onboarding/PitchScreen.tsx
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
@@ -12,7 +13,9 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../../theme/ThemeContext';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { RootStackParamList } from '../../types';
+import { MOTION_DURATION, motionEasing } from '../../utils/motion';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -232,10 +235,153 @@ function PaneVisualComponent({ visual }: { visual: PaneVisual }) {
   }
 }
 
+function PageDot({
+  isActive,
+  activeColor,
+  inactiveColor,
+}: {
+  isActive: boolean;
+  activeColor: string;
+  inactiveColor: string;
+}) {
+  const reduceMotion = useReducedMotion();
+  const [activeProgress] = useState(() => new Animated.Value(isActive ? 1 : 0));
+
+  useEffect(() => {
+    if (reduceMotion) {
+      activeProgress.stopAnimation();
+      activeProgress.setValue(isActive ? 1 : 0);
+      return;
+    }
+
+    const animation = Animated.timing(activeProgress, {
+      toValue: isActive ? 1 : 0,
+      duration: MOTION_DURATION.dot,
+      easing: motionEasing,
+      useNativeDriver: true,
+    });
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [activeProgress, isActive, reduceMotion]);
+
+  const scale = activeProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.75, 1],
+  });
+  const opacity = activeProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 1],
+  });
+
+  return (
+    <View style={styles.dotSlot}>
+      <Animated.View
+        style={[
+          styles.dot,
+          {
+            backgroundColor: isActive ? activeColor : inactiveColor,
+            opacity,
+            transform: [{ scale }],
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+// ─── Pane text block with stagger animation ──────────────────────────────────
+
+function PaneTextBlock({
+  pane,
+  isActive,
+  reduceMotion,
+}: {
+  pane: typeof PANES[number];
+  isActive: boolean;
+  reduceMotion: boolean;
+}) {
+  const t = useTheme();
+  const [eyebrowOpacity] = useState(() => new Animated.Value(isActive ? 1 : 0));
+  const [eyebrowTranslate] = useState(() => new Animated.Value(isActive ? 0 : 8));
+  const [titleOpacity] = useState(() => new Animated.Value(isActive ? 1 : 0));
+  const [titleTranslate] = useState(() => new Animated.Value(isActive ? 0 : 8));
+  const [bodyOpacity] = useState(() => new Animated.Value(isActive ? 1 : 0));
+  const [bodyTranslate] = useState(() => new Animated.Value(isActive ? 0 : 8));
+
+  useEffect(() => {
+    if (!isActive) {
+      eyebrowOpacity.setValue(0);
+      eyebrowTranslate.setValue(8);
+      titleOpacity.setValue(0);
+      titleTranslate.setValue(8);
+      bodyOpacity.setValue(0);
+      bodyTranslate.setValue(8);
+      return;
+    }
+
+    if (reduceMotion) {
+      eyebrowOpacity.setValue(1);
+      eyebrowTranslate.setValue(0);
+      titleOpacity.setValue(1);
+      titleTranslate.setValue(0);
+      bodyOpacity.setValue(1);
+      bodyTranslate.setValue(0);
+      return;
+    }
+
+    const dur = MOTION_DURATION.section;
+    const pairs: [Animated.Value, Animated.Value][] = [
+      [eyebrowOpacity, eyebrowTranslate],
+      [titleOpacity, titleTranslate],
+      [bodyOpacity, bodyTranslate],
+    ];
+    const animations = pairs.map(([op, tr], i) =>
+      Animated.parallel([
+        Animated.timing(op, { toValue: 1, duration: dur, delay: i * 40, easing: motionEasing, useNativeDriver: true }),
+        Animated.timing(tr, { toValue: 0, duration: dur, delay: i * 40, easing: motionEasing, useNativeDriver: true }),
+      ])
+    );
+
+    animations.forEach(a => a.start());
+
+    return () => animations.forEach(a => a.stop());
+  }, [
+    isActive, reduceMotion,
+    eyebrowOpacity, eyebrowTranslate,
+    titleOpacity, titleTranslate,
+    bodyOpacity, bodyTranslate,
+  ]);
+
+  return (
+    <>
+      <Animated.Text
+        style={[styles.eyebrow, { color: t.textMuted, opacity: eyebrowOpacity, transform: [{ translateY: eyebrowTranslate }] }]}
+      >
+        {pane.eyebrow}
+      </Animated.Text>
+      <Animated.Text
+        style={[styles.title, { color: t.text, opacity: titleOpacity, transform: [{ translateY: titleTranslate }] }]}
+      >
+        {pane.title}
+      </Animated.Text>
+      <Animated.Text
+        style={[styles.body, { color: t.textMuted, opacity: bodyOpacity, transform: [{ translateY: bodyTranslate }] }]}
+      >
+        {pane.body}
+      </Animated.Text>
+    </>
+  );
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function PitchScreen({ navigation }: Props) {
   const t = useTheme();
+  const reduceMotion = useReducedMotion();
   const [currentPage, setCurrentPage] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -279,9 +425,11 @@ export default function PitchScreen({ navigation }: Props) {
       >
         {PANES.map((pane, index) => (
           <View key={index} style={[styles.pane, { width: SCREEN_WIDTH }]}>
-            <Text style={[styles.eyebrow, { color: t.textMuted }]}>{pane.eyebrow}</Text>
-            <Text style={[styles.title, { color: t.text }]}>{pane.title}</Text>
-            <Text style={[styles.body, { color: t.textMuted }]}>{pane.body}</Text>
+            <PaneTextBlock
+              pane={pane}
+              isActive={index === currentPage}
+              reduceMotion={reduceMotion}
+            />
             <View style={styles.visualContainer}>
               <PaneVisualComponent visual={pane.visual} />
             </View>
@@ -294,14 +442,11 @@ export default function PitchScreen({ navigation }: Props) {
         {/* Page dots */}
         <View style={styles.dotsRow}>
           {PANES.map((_, i) => (
-            <View
+            <PageDot
               key={i}
-              style={[
-                styles.dot,
-                i === currentPage
-                  ? [styles.dotActive, { backgroundColor: t.accentStrong }]
-                  : [styles.dotInactive, { backgroundColor: t.surfaceMuted }],
-              ]}
+              isActive={i === currentPage}
+              activeColor={t.accentStrong}
+              inactiveColor={t.surfaceMuted}
             />
           ))}
         </View>
@@ -379,15 +524,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dot: {
-    borderRadius: 999,
-  },
-  dotActive: {
     width: 8,
     height: 8,
+    borderRadius: 999,
   },
-  dotInactive: {
-    width: 6,
-    height: 6,
+  dotSlot: {
+    width: 8,
+    height: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   ctaButton: {
     height: 52,

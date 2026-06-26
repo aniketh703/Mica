@@ -15,6 +15,7 @@ import { RouteProp } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { useSettings } from '../../hooks/useSettings';
+import { useEventRepository } from '../../hooks/useEventRepository';
 import { RootStackParamList, InterestCategory } from '../../types';
 import { ThemeMode } from '../../theme/ThemeContext';
 import { requestNotificationPermission } from '../../services/NotificationService';
@@ -74,6 +75,12 @@ const EVENT_COLORS = [
 ];
 
 // ─── Helper: default date (today + 30 days) ───────────────────────────────────
+function defaultEventDateIso(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function defaultEventDate(): string {
   const d = new Date();
   d.setDate(d.getDate() + 30);
@@ -85,6 +92,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
   const t = useTheme();
   const { mode: currentMode, setMode } = useThemeMode();
   const { updateSetting } = useSettings();
+  const repo = useEventRepository();
 
   const step = route.params?.step ?? 1;
 
@@ -101,7 +109,8 @@ export default function OnboardingScreen({ navigation, route }: Props) {
   // Step 5 state
   const [eventName, setEventName] = useState('');
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
-  const [eventDate] = useState(defaultEventDate());
+  const [eventDate]    = useState(defaultEventDate());
+  const [eventDateIso] = useState(defaultEventDateIso());
 
   // ─── Navigation helpers ─────────────────────────────────────────────────────
   function goBack() {
@@ -145,6 +154,20 @@ export default function OnboardingScreen({ navigation, route }: Props) {
   }
 
   async function handleFinish() {
+    // Save the first event if the user named it
+    if (eventName.trim().length > 0) {
+      await repo.create({
+        title:       eventName.trim(),
+        dateIso:     eventDateIso,
+        color:       EVENT_COLORS[selectedColorIdx],
+        type:        'Other',
+        repeats:     'None',
+        reminder:    '1 day before',
+        note:        '',
+        dayOfYear:   0, // recalculated by EventRepository.create()
+        notificationIds: [],
+      });
+    }
     await updateSetting('onboardingComplete', true);
     goMain();
   }

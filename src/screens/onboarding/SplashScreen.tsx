@@ -1,5 +1,5 @@
 // src/screens/onboarding/SplashScreen.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,9 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTheme } from '../../theme/ThemeContext';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { RootStackParamList } from '../../types';
+import { MOTION_DURATION } from '../../utils/motion';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, 'Splash'>;
@@ -30,21 +32,38 @@ const DOT_GRID: DotState[][] = [
 export default function SplashScreen({ navigation }: Props) {
   const t = useTheme();
   const db = useSQLiteContext();
-  const spinValue = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReducedMotion();
+  const [spinValue] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    // Start rotation animation
-    Animated.loop(
+    if (reduceMotion) {
+      spinValue.stopAnimation();
+      spinValue.setValue(0);
+      return;
+    }
+
+    const spinLoop = Animated.loop(
       Animated.timing(spinValue, {
         toValue: 1,
-        duration: 1000,
+        duration: MOTION_DURATION.spinner,
         useNativeDriver: true,
       }),
-    ).start();
+    );
 
+    spinLoop.start();
+
+    return () => {
+      spinLoop.stop();
+      spinValue.setValue(0);
+    };
+  }, [reduceMotion, spinValue]);
+
+  useEffect(() => {
     // Check onboarding flag and navigate accordingly after splash duration
     const MIN_SPLASH_MS = 1500;
     const startedAt = Date.now();
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let mounted = true;
 
     async function checkAndNavigate() {
       let onboardingComplete = false;
@@ -61,13 +80,21 @@ export default function SplashScreen({ navigation }: Props) {
       // Ensure we always show the splash for at least MIN_SPLASH_MS
       const elapsed = Date.now() - startedAt;
       const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
+        if (!mounted) return;
         navigation.replace(onboardingComplete ? 'Main' : 'Pitch');
       }, remaining);
     }
 
     checkAndNavigate();
-  }, [navigation, spinValue, db]);
+
+    return () => {
+      mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [navigation, db]);
 
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
