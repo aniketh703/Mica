@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MicaEvent } from '../types';
 import { useEventRepository } from './useEventRepository';
+import { effectiveDaysUntil } from '../utils/yearProgress';
 
 interface UseEventsResult {
   events: MicaEvent[];
@@ -24,7 +25,18 @@ export function useEvents(): UseEventsResult {
       setLoading(true);
       setError(null);
       const all = await repo.getAll();
-      setEvents(all);
+      // Sort by next occurrence so repeating events always float to the correct
+      // position rather than sorting by their (possibly years-old) stored date.
+      // Future/today events come first (ascending), past one-time events last
+      // (most-recent first so they appear just below the upcoming section).
+      const sorted = [...all].sort((a, b) => {
+        const da = effectiveDaysUntil(a);
+        const db = effectiveDaysUntil(b);
+        if (da >= 0 && db >= 0) return da - db;   // both upcoming: closer first
+        if (da < 0  && db < 0)  return db - da;   // both past: most recent first
+        return da >= 0 ? -1 : 1;                  // upcoming before past
+      });
+      setEvents(sorted);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load events');
     } finally {
