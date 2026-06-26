@@ -5,14 +5,13 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "assetBundlePatterns": [
       "**/*"
     ],
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#F5F1EA"
     },
     "android": {
