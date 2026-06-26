@@ -2,7 +2,8 @@ module.exports = {
   preset: 'react-native',
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
   testMatch: ['**/__tests__/**/*.test.ts?(x)'],
-  testPathIgnorePatterns: ['/node_modules/', '/.claude/worktrees/'],
+  testPathIgnorePatterns: ['/node_modules/', '/.claude/', '/build-archive-inspect/'],
+  modulePathIgnorePatterns: ['<rootDir>/build-archive-inspect/', '<rootDir>/.claude/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transformIgnorePatterns: [
     'node_modules/(?!(react-native|@react-native|@react-navigation)/)',

@@ -56,7 +56,6 @@
           "defaultChannel": "mica-events"
         }
       ],
-      "expo-font"
     ],
     "extra": {
       "eas": {
