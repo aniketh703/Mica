@@ -39,16 +39,23 @@ export function useSettings() {
         repo.getSetting('onboardingComplete'),
       ]);
       const hapticsEnabled = haptics !== null ? haptics === 'true' : DEFAULTS.hapticsEnabled;
-      // Sync the module-level haptics flag immediately on load
       setHapticsEnabled(hapticsEnabled);
+      let parsedInterests: InterestCategory[] = DEFAULTS.interests;
+      try {
+        parsedInterests = interests ? (JSON.parse(interests) as InterestCategory[]) : DEFAULTS.interests;
+      } catch {
+        // corrupted stored value — fall back to empty list
+      }
       setSettings({
         themeMode: (theme as ThemeMode) ?? DEFAULTS.themeMode,
         userName: name ?? DEFAULTS.userName,
-        interests: interests ? (JSON.parse(interests) as InterestCategory[]) : DEFAULTS.interests,
+        interests: parsedInterests,
         notificationsEnabled: notifs !== null ? notifs === 'true' : DEFAULTS.notificationsEnabled,
         hapticsEnabled,
         onboardingComplete: onboarded === 'true',
       });
+    } catch {
+      // DB read failure — keep defaults, don't leave the app in a broken state
     } finally {
       setLoading(false);
     }

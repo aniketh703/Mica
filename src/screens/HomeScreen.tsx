@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -113,7 +113,7 @@ export default function HomeScreen({ navigation }: Props) {
     duration: MOTION_DURATION.content,
     fromTranslateY: 10,
   });
-  const yp = getYearProgress();
+  const yp = useMemo(() => getYearProgress(), []);
   const { width: screenWidth } = useWindowDimensions();
   // card width = screenWidth - 44px page padding - 40px card padding - 2px border
   const gridWidth = screenWidth - 86;

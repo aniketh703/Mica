@@ -37,7 +37,7 @@ export default function EventDetailScreen({ navigation, route }: Props) {
       .getById(route.params.eventId)
       .then(setEvent)
       .finally(() => setLoading(false));
-  }, [route.params.eventId]);
+  }, [route.params.eventId, repo]);
 
   function handleDelete() {
     if (!event) return;

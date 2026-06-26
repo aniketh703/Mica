@@ -182,9 +182,21 @@ export function buildEventDaysMap(events: MicaEvent[], currentYear: number): Map
   for (const ev of events) {
     if (!ev.dateIso) continue;
     const [year] = ev.dateIso.split('-').map(Number);
-    // Include events from this year; for yearly repeats, include any year
-    if (year === currentYear || ev.repeats === 'Yearly') {
-      map.set(ev.dayOfYear, ev.color);
+
+    if (ev.repeats === 'None') {
+      if (year !== currentYear) continue;
+      map.set(dateIsoToDayOfYear(ev.dateIso), ev.color);
+    } else if (ev.repeats === 'Yearly') {
+      // Always show at this year's position, even if the date has passed
+      const thisYearIso = `${currentYear}-${ev.dateIso.slice(5)}`;
+      map.set(dateIsoToDayOfYear(thisYearIso), ev.color);
+    } else {
+      // Monthly: show the next occurrence only if it falls this year
+      const nextIso = nextOccurrenceIso(ev);
+      const [nextYear] = nextIso.split('-').map(Number);
+      if (nextYear === currentYear) {
+        map.set(dateIsoToDayOfYear(nextIso), ev.color);
+      }
     }
   }
   return map;

@@ -139,7 +139,7 @@ export default function AddEventScreen({ navigation, route }: Props) {
         }
       });
     }
-  }, [editId]);
+  }, [editId, repo]);
 
   function cycleRepeats() {
     const idx = REPEAT_OPTIONS.indexOf(repeats);
