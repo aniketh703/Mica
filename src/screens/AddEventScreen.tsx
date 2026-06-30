@@ -15,14 +15,15 @@ import { Ionicons } from '@expo/vector-icons';
 import * as H from '../utils/haptics';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerChangeEvent } from '@react-native-community/datetimepicker';
 import { useTheme } from '../theme/ThemeContext';
 import { Theme } from '../theme/palette';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useEventRepository } from '../hooks/useEventRepository';
+import { usePremium, FREE_EVENT_LIMIT } from '../context/PremiumContext';
 import { RootStackParamList, EventTypeOption, RepeatOption, ReminderOption } from '../types';
 import { dateIsoToDisplay } from '../utils/yearProgress';
-import { MOTION_DURATION, motionEasing } from '../utils/motion';
+import { duration, easeEnter } from '../utils/motion';
 import {
   scheduleEventNotifications,
   cancelEventNotifications,
@@ -107,6 +108,7 @@ function dateToIso(date: Date): string {
 export default function AddEventScreen({ navigation, route }: Props) {
   const t = useTheme();
   const repo = useEventRepository();
+  const { canAddEvent, refreshCount } = usePremium();
   const reduceMotion = useReducedMotion();
   const [pickerOpacity] = useState(() => new Animated.Value(1));
 
@@ -151,9 +153,13 @@ export default function AddEventScreen({ navigation, route }: Props) {
     setReminder(REMINDER_OPTIONS[(idx + 1) % REMINDER_OPTIONS.length]);
   }
 
-  function onDateChange(_event: DateTimePickerEvent, date?: Date) {
-    setShowDatePicker(Platform.OS === 'ios');
+  function onDateValueChange(_event: DateTimePickerChangeEvent, date: Date) {
     if (date) setDateIso(dateToIso(date));
+    if (Platform.OS !== 'ios') setShowDatePicker(false);
+  }
+
+  function onDateDismiss() {
+    setShowDatePicker(false);
   }
 
   function showPicker() {
@@ -161,7 +167,7 @@ export default function AddEventScreen({ navigation, route }: Props) {
 
     if (Platform.OS === 'ios' && !reduceMotion) {
       LayoutAnimation.configureNext({
-        duration: MOTION_DURATION.picker,
+        duration: duration.standard,
         update: {
           type: LayoutAnimation.Types.easeInEaseOut,
         },
@@ -183,8 +189,8 @@ export default function AddEventScreen({ navigation, route }: Props) {
     pickerOpacity.setValue(0);
     const animation = Animated.timing(pickerOpacity, {
       toValue: 1,
-      duration: MOTION_DURATION.picker,
-      easing: motionEasing,
+      duration: duration.standard,
+      easing: easeEnter,
       useNativeDriver: true,
     });
 
@@ -197,6 +203,13 @@ export default function AddEventScreen({ navigation, route }: Props) {
 
   async function handleSave() {
     if (!title.trim() || saving) return;
+    if (!isEdit && !canAddEvent) {
+      Alert.alert(
+        'Free limit reached',
+        `You've used all ${FREE_EVENT_LIMIT} free events. Delete an existing event to add a new one.`
+      );
+      return;
+    }
     setSaving(true);
     try {
       if (isEdit && editId) {
@@ -226,6 +239,7 @@ export default function AddEventScreen({ navigation, route }: Props) {
         });
         const ids = await scheduleEventNotifications(ev);
         if (ids.length > 0) await repo.update(ev.id, { notificationIds: ids });
+        await refreshCount();
       }
       H.notificationAsync(H.NotificationFeedbackType.Success);
       navigation.goBack();
@@ -352,7 +366,7 @@ export default function AddEventScreen({ navigation, route }: Props) {
               value={pickerDate}
               mode="date"
               display="default"
-              onChange={onDateChange}
+              onValueChange={onDateValueChange}
               minimumDate={new Date()}
             />
           </Animated.View>
@@ -362,7 +376,8 @@ export default function AddEventScreen({ navigation, route }: Props) {
             value={pickerDate}
             mode="date"
             display="spinner"
-            onChange={onDateChange}
+            onValueChange={onDateValueChange}
+            onDismiss={onDateDismiss}
             minimumDate={new Date()}
           />
         )}

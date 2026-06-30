@@ -1,8 +1,9 @@
 // src/hooks/useEvents.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MicaEvent } from '../types';
 import { useEventRepository } from './useEventRepository';
 import { effectiveDaysUntil } from '../utils/yearProgress';
+import { usePremium } from '../context/PremiumContext';
 
 interface UseEventsResult {
   events: MicaEvent[];
@@ -16,13 +17,16 @@ interface UseEventsResult {
 
 export function useEvents(): UseEventsResult {
   const repo = useEventRepository();
+  const { refreshCount } = usePremium();
   const [events, setEvents] = useState<MicaEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoaded = useRef(false);
 
   const refresh = useCallback(async () => {
+    const isInitial = !hasLoaded.current;
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       setError(null);
       const all = await repo.getAll();
       // Sort by next occurrence so repeating events always float to the correct
@@ -40,7 +44,8 @@ export function useEvents(): UseEventsResult {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load events');
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
+      hasLoaded.current = true;
     }
   }, [repo]);
 
@@ -53,9 +58,9 @@ export function useEvents(): UseEventsResult {
   ): Promise<MicaEvent> => {
     const payload: Omit<MicaEvent, 'id' | 'appwriteId' | 'createdAt' | 'updatedAt'> = { ...data, notificationIds: [] };
     const ev = await repo.create(payload);
-    await refresh();
+    await Promise.all([refresh(), refreshCount()]);
     return ev;
-  }, [repo, refresh]);
+  }, [repo, refresh, refreshCount]);
 
   const updateEvent = useCallback(async (id: string, patch: Partial<MicaEvent>): Promise<MicaEvent> => {
     const ev = await repo.update(id, patch);
@@ -65,8 +70,8 @@ export function useEvents(): UseEventsResult {
 
   const deleteEvent = useCallback(async (id: string): Promise<void> => {
     await repo.delete(id);
-    await refresh();
-  }, [repo, refresh]);
+    await Promise.all([refresh(), refreshCount()]);
+  }, [repo, refresh, refreshCount]);
 
   return { events, loading, error, refresh, createEvent, updateEvent, deleteEvent };
 }

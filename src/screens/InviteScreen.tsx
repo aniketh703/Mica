@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Share } from 'react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
+import * as Clipboard from 'expo-clipboard';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSettings } from '../hooks/useSettings';
+import { useEventRepository } from '../hooks/useEventRepository';
 import { RootStackParamList } from '../types';
+
+function randomSuffix(): string {
+  return Math.random().toString(36).slice(2, 6).toUpperCase();
+}
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, 'Invite'>;
@@ -25,19 +30,39 @@ const SHARE_BTNS = [
 export default function InviteScreen({ navigation }: Props) {
   const t = useTheme();
   const { settings } = useSettings();
+  const repo = useEventRepository();
   const [copied, setCopied] = useState(false);
+  // Stable per-install random suffix so two users with the same name don't
+  // collide on the same referral code. Generated once, then persisted.
+  const [suffix, setSuffix] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    repo.getSetting('referralSuffix').then(async existing => {
+      if (existing) {
+        if (mounted) setSuffix(existing);
+        return;
+      }
+      const generated = randomSuffix();
+      await repo.setSetting('referralSuffix', generated);
+      if (mounted) setSuffix(generated);
+    });
+    return () => { mounted = false; };
+  }, [repo]);
 
   // Build referral code from the user's name, falling back to a generic slug
   const userSlug = (settings.userName || 'YOU').toUpperCase().replace(/\s+/g, '-').slice(0, 12);
-  const REFERRAL_CODE = `${userSlug}-MICA-${new Date().getFullYear()}`;
+  const REFERRAL_CODE = suffix ? `${userSlug}-MICA-${suffix}` : null;
 
-  function handleCopy() {
-    Clipboard.setString(REFERRAL_CODE);
+  async function handleCopy() {
+    if (!REFERRAL_CODE) return;
+    await Clipboard.setStringAsync(REFERRAL_CODE);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   async function handleShare() {
+    if (!REFERRAL_CODE) return;
     try {
       await Share.share({
         message: `Join me on Mica — a personal countdown app. Use my code ${REFERRAL_CODE} to get started.\nhttps://mica.app`,
@@ -77,7 +102,7 @@ export default function InviteScreen({ navigation }: Props) {
           <View style={[styles.cardBloom, { backgroundColor: t.accentSoft }]} />
           <Text style={[styles.eyebrow, { color: t.textMuted }]}>YOUR REFERRAL CODE</Text>
           <View style={[styles.codeBox, { backgroundColor: t.surfaceMuted, borderColor: t.border }]}>
-            <Text style={[styles.codeText, { color: t.accentStrong }]}>{REFERRAL_CODE}</Text>
+            <Text style={[styles.codeText, { color: t.accentStrong }]}>{REFERRAL_CODE ?? '…'}</Text>
             <TouchableOpacity
               style={[styles.copyBtn, { backgroundColor: copied ? t.success : t.accentStrong }]}
               onPress={handleCopy}

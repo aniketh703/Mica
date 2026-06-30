@@ -14,7 +14,6 @@ import {
 import * as H from '../utils/haptics';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../theme/ThemeContext';
-import { useReducedMotion } from '../hooks/useReducedMotion';
 import { RootStackParamList } from '../types';
 import { useEvents } from '../hooks/useEvents';
 import {
@@ -27,93 +26,30 @@ import {
   isExpired,
 } from '../utils/yearProgress';
 import YearGrid from '../components/YearGrid';
-import { MOTION_DURATION, motionEasing } from '../utils/motion';
+import AnimatedMountView, { useEnterAnimation } from '../components/AnimatedMountView';
+import { duration } from '../utils/motion';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList>;
 };
 
-type EnterConfig = {
-  duration: number;
-  delay?: number;
-  fromTranslateY?: number;
-  fromScale?: number;
-};
-
-function useEnterAnimation(reduceMotion: boolean, config: EnterConfig) {
-  const [progress] = useState(() => new Animated.Value(0));
-
-  useEffect(() => {
-    if (reduceMotion) {
-      progress.stopAnimation();
-      progress.setValue(1);
-      return;
-    }
-
-    progress.setValue(0);
-    const animation = Animated.timing(progress, {
-      toValue: 1,
-      duration: config.duration,
-      delay: config.delay ?? 0,
-      easing: motionEasing,
-      useNativeDriver: true,
-    });
-
-    animation.start();
-
-    return () => {
-      animation.stop();
-    };
-  }, [config.delay, config.duration, progress, reduceMotion]);
-
-  const transforms = [];
-  if (config.fromTranslateY !== undefined) {
-    transforms.push({
-      translateY: progress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [config.fromTranslateY, 0],
-      }),
-    });
-  }
-  if (config.fromScale !== undefined) {
-    transforms.push({
-      scale: progress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [config.fromScale, 1],
-      }),
-    });
-  }
-
-  return {
-    opacity: progress,
-    transform: transforms,
-  };
-}
-
-function AnimatedMountView({
-  children,
-  config,
-}: {
-  children: React.ReactNode;
-  config: EnterConfig;
-}) {
-  const reduceMotion = useReducedMotion();
-  const enterStyle = useEnterAnimation(reduceMotion, config);
-
-  return <Animated.View style={enterStyle}>{children}</Animated.View>;
-}
 
 export default function HomeScreen({ navigation }: Props) {
   const t = useTheme();
-  const reduceMotion = useReducedMotion();
   const { events, loading, refresh } = useEvents();
   const [refreshing, setRefreshing] = useState(false);
   const [focusKey, setFocusKey] = useState(0);
-  const contentEnterStyle = useEnterAnimation(reduceMotion, {
-    duration: MOTION_DURATION.content,
+  const contentEnterStyle = useEnterAnimation({
+    duration: duration.enter,
     fromTranslateY: 10,
   });
-  const yp = useMemo(() => getYearProgress(), []);
+  // Recompute on tab focus, and every minute while mounted so the
+  // progress/countdown doesn't go stale if the app is left open across midnight.
+  useEffect(() => {
+    const id = setInterval(() => setFocusKey(k => k + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const yp = useMemo(() => getYearProgress(), [focusKey]);
   const { width: screenWidth } = useWindowDimensions();
   // card width = screenWidth - 44px page padding - 40px card padding - 2px border
   const gridWidth = screenWidth - 86;
@@ -188,7 +124,7 @@ export default function HomeScreen({ navigation }: Props) {
         {next ? (
           <AnimatedMountView
             key={`next-${next.id}`}
-            config={{ duration: MOTION_DURATION.card, fromScale: 0.96 }}
+            config={{ duration: duration.standard, fromScale: 0.96 }}
           >
             <TouchableOpacity
               style={[styles.card, styles.cardLarge, { backgroundColor: t.surface, borderColor: t.border }]}
@@ -240,7 +176,7 @@ export default function HomeScreen({ navigation }: Props) {
           /* Empty state */
           <AnimatedMountView
             key="empty"
-            config={{ duration: MOTION_DURATION.card, fromScale: 0.96 }}
+            config={{ duration: duration.standard, fromScale: 0.96 }}
           >
             <TouchableOpacity
               style={[styles.card, styles.emptyCard, { backgroundColor: t.surface, borderColor: t.border }]}
@@ -284,7 +220,7 @@ export default function HomeScreen({ navigation }: Props) {
           <AnimatedMountView
             key="more-coming-up"
             config={{
-              duration: MOTION_DURATION.section,
+              duration: duration.standard,
               delay: 60,
               fromTranslateY: 10,
             }}

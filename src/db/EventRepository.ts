@@ -20,18 +20,44 @@ interface EventRow {
   updated_at: string;
 }
 
+const EVENT_TYPES: EventTypeOption[] = ['Birthday', 'Deadline', 'Vacation', 'Milestone', 'Other'];
+const REPEAT_OPTIONS: RepeatOption[] = ['None', 'Yearly', 'Monthly'];
+const REMINDER_OPTIONS: ReminderOption[] = ['None', '1 day before', '3 days before', '1 week before', 'On the day'];
+
+function coerceEnum<T extends string>(value: string, allowed: T[], fallback: T): T {
+  return (allowed as string[]).includes(value) ? (value as T) : fallback;
+}
+
+function safeParseNotificationIds(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.every(v => typeof v === 'string') ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isValidDateIso(value: string): boolean {
+  if (!ISO_DATE_RE.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
 function rowToEvent(row: EventRow): MicaEvent {
   return {
     id: row.id,
     title: row.title,
     dateIso: row.date_iso,
     color: row.color,
-    type: row.type as EventTypeOption,
-    repeats: row.repeats as RepeatOption,
-    reminder: row.reminder as ReminderOption,
+    type: coerceEnum(row.type, EVENT_TYPES, 'Other'),
+    repeats: coerceEnum(row.repeats, REPEAT_OPTIONS, 'None'),
+    reminder: coerceEnum(row.reminder, REMINDER_OPTIONS, 'None'),
     note: row.note,
     dayOfYear: row.day_of_year,
-    notificationIds: JSON.parse(row.notification_ids) as string[],
+    notificationIds: safeParseNotificationIds(row.notification_ids),
     appwriteId: row.appwrite_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -67,6 +93,9 @@ export class EventRepository {
     data: Omit<MicaEvent, 'id' | 'createdAt' | 'updatedAt' | 'appwriteId'>
   ): Promise<MicaEvent> {
     // crypto.randomUUID() is available in React Native 0.73+ via the Hermes engine
+    if (!isValidDateIso(data.dateIso)) {
+      throw new Error(`Invalid dateIso: ${data.dateIso}`);
+    }
     const id = (globalThis as unknown as { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const now = new Date().toISOString();
     const dayOfYear = dateIsoToDayOfYear(data.dateIso);
@@ -93,6 +122,9 @@ export class EventRepository {
   ): Promise<MicaEvent> {
     const existing = await this.getById(id);
     if (!existing) throw new Error(`Event ${id} not found`);
+    if (patch.dateIso !== undefined && !isValidDateIso(patch.dateIso)) {
+      throw new Error(`Invalid dateIso: ${patch.dateIso}`);
+    }
     const now = new Date().toISOString();
     const merged = { ...existing, ...patch };
     const dayOfYear = dateIsoToDayOfYear(merged.dateIso);

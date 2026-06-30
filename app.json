@@ -56,6 +56,7 @@
           "defaultChannel": "mica-events"
         }
       ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

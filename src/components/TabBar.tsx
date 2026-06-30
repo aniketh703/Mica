@@ -5,7 +5,7 @@ import * as H from '../utils/haptics';
 import { Theme } from '../theme/palette';
 import { TabName } from '../types';
 import { useReducedMotion } from '../hooks/useReducedMotion';
-import { MOTION_DURATION, motionEasing } from '../utils/motion';
+import { duration, easeState } from '../utils/motion';
 
 interface TabBarProps {
   activeTab: TabName;
@@ -50,8 +50,8 @@ function TabItem({
 
     const animation = Animated.timing(activeProgress, {
       toValue: isActive ? 1 : 0,
-      duration: MOTION_DURATION.tab,
-      easing: motionEasing,
+      duration: duration.micro,
+      easing: easeState,
       useNativeDriver: true,
     });
 

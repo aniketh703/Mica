@@ -12,7 +12,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { RootStackParamList } from '../../types';
-import { MOTION_DURATION } from '../../utils/motion';
+import { duration, easeLoop } from '../../utils/motion';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, 'Splash'>;
@@ -45,7 +45,8 @@ export default function SplashScreen({ navigation }: Props) {
     const spinLoop = Animated.loop(
       Animated.timing(spinValue, {
         toValue: 1,
-        duration: MOTION_DURATION.spinner,
+        duration: duration.loop,
+        easing: easeLoop,
         useNativeDriver: true,
       }),
     );

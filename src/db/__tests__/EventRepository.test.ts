@@ -15,12 +15,18 @@ jest.mock('../../utils/yearProgress', () => ({
 
 // Helper: create an in-memory repo for each test
 async function makeRepo(): Promise<EventRepository> {
+  const { db } = await makeRepoWithDb();
+  return new EventRepository(db);
+}
+
+// Like makeRepo, but also exposes the raw db handle for corruption tests
+async function makeRepoWithDb(): Promise<{ repo: EventRepository; db: import('expo-sqlite').SQLiteDatabase }> {
   const { openDatabaseAsync } = jest.requireMock('expo-sqlite') as {
     openDatabaseAsync: (name: string) => Promise<import('expo-sqlite').SQLiteDatabase>;
   };
   const db = await openDatabaseAsync(':memory:');
   await migrateDatabase(db);
-  return new EventRepository(db);
+  return { repo: new EventRepository(db), db };
 }
 
 const SAMPLE = {
@@ -104,5 +110,41 @@ describe('EventRepository', () => {
     await repo.setSetting('theme', 'light');
     await repo.setSetting('theme', 'dark');
     expect(await repo.getSetting('theme')).toBe('dark');
+  });
+
+  it('create rejects an invalid dateIso', async () => {
+    const repo = await makeRepo();
+    await expect(repo.create({ ...SAMPLE, dateIso: '2026-13-40' })).rejects.toThrow('Invalid dateIso');
+  });
+
+  it('create rejects a calendar-invalid dateIso (Feb 30)', async () => {
+    const repo = await makeRepo();
+    await expect(repo.create({ ...SAMPLE, dateIso: '2026-02-30' })).rejects.toThrow('Invalid dateIso');
+  });
+
+  it('update rejects an invalid dateIso', async () => {
+    const repo = await makeRepo();
+    const ev = await repo.create(SAMPLE);
+    await expect(repo.update(ev.id, { dateIso: 'not-a-date' })).rejects.toThrow('Invalid dateIso');
+  });
+
+  it('survives corrupted notification_ids JSON without throwing', async () => {
+    const { repo, db } = await makeRepoWithDb();
+    const ev = await repo.create(SAMPLE);
+    await db.runAsync('UPDATE events SET notification_ids=? WHERE id=?', ['{not valid json', ev.id]);
+    const fetched = await repo.getById(ev.id);
+    expect(fetched?.notificationIds).toEqual([]);
+  });
+
+  it('falls back to a safe default for an invalid stored enum value', async () => {
+    const { repo, db } = await makeRepoWithDb();
+    const ev = await repo.create(SAMPLE);
+    await db.runAsync('UPDATE events SET type=?, repeats=?, reminder=? WHERE id=?', [
+      'NotARealType', 'NotARealRepeat', 'NotARealReminder', ev.id,
+    ]);
+    const fetched = await repo.getById(ev.id);
+    expect(fetched?.type).toBe('Other');
+    expect(fetched?.repeats).toBe('None');
+    expect(fetched?.reminder).toBe('None');
   });
 });

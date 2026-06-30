@@ -159,7 +159,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       await repo.create({
         title:       eventName.trim(),
         dateIso:     eventDateIso,
-        color:       EVENT_COLORS[selectedColorIdx],
+        color:       EVENT_COLORS[selectedColorIdx] ?? EVENT_COLORS[0],
         type:        'Other',
         repeats:     'None',
         reminder:    '1 day before',

@@ -99,7 +99,7 @@ export default function SettingsScreen({ navigation }: Props) {
               Alert.alert('Coming soon', 'Premium features are coming in a future update.')
             }
           >
-            <Text style={styles.unlockBtnText}>Unlock Mica Premium</Text>
+            <Text style={[styles.unlockBtnText, { color: t.onAccent }]}>Unlock Mica Premium</Text>
           </TouchableOpacity>
         </View>
 
@@ -129,7 +129,7 @@ export default function SettingsScreen({ navigation }: Props) {
                       : { backgroundColor: t.surfaceMuted },
                   ]}
                 >
-                  <Text style={[styles.themeBtnText, { color: isActive ? '#FFF7EC' : t.textMuted }]}>
+                  <Text style={[styles.themeBtnText, { color: isActive ? t.onAccent : t.textMuted }]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   featureText: { fontSize: 15 },
   usageLine: { fontSize: 13, marginTop: -4 },
   unlockBtn: { minHeight: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  unlockBtnText: { color: '#FFF7EC', fontSize: 16, fontWeight: '700' },
+  unlockBtnText: { fontSize: 16, fontWeight: '700' },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   themeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: -4 },

@@ -1,6 +1,31 @@
 // src/utils/yearProgress.ts
 import { CellData, LifeCellData, MicaEvent } from '../types';
 
+// ─── Calendar-safe day arithmetic ─────────────────────────────────────────────
+// All day-difference math goes through Date.UTC on Y/M/D components rather than
+// local Date millisecond diffs. This avoids two classes of bugs: DST transitions
+// (local midnight-to-midnight is not always exactly 86400000ms) and timezone
+// rollover (constructing local dates can shift which calendar day is "meant").
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/** Day-of-year-independent day index — exact, DST-proof, UTC-based. */
+function isoToUtcDayIndex(iso: string): number {
+  const [year, month, day] = iso.split('-').map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86400000);
+}
+
+/** Clamp Feb 29 to Feb 28 when the target year isn't a leap year. */
+function safeYearlyIso(year: number, mmdd: string): string {
+  const [month, day] = mmdd.split('-').map(Number);
+  if (month === 2 && day === 29 && !isLeapYear(year)) {
+    return `${year}-02-28`;
+  }
+  return `${year}-${mmdd}`;
+}
+
 // ─── Repeat-aware event helpers ───────────────────────────────────────────────
 
 /**
@@ -16,18 +41,21 @@ export function nextOccurrenceIso(ev: MicaEvent): string {
   if (ev.repeats === 'Yearly') {
     const thisYear    = new Date().getFullYear();
     const mmdd        = iso.slice(5); // "MM-DD"
-    const thisYearIso = `${thisYear}-${mmdd}`;
-    return thisYearIso >= today ? thisYearIso : `${thisYear + 1}-${mmdd}`;
+    const thisYearIso = safeYearlyIso(thisYear, mmdd);
+    return thisYearIso >= today ? thisYearIso : safeYearlyIso(thisYear + 1, mmdd);
   }
 
   if (ev.repeats === 'Monthly') {
-    const dd  = iso.slice(8); // "DD"
+    const dd  = Number(iso.slice(8)); // "DD"
     const now = new Date();
     let y = now.getFullYear();
     let m = now.getMonth() + 1;
     // Walk forward month-by-month (max 13 iterations handles every edge case)
     for (let i = 0; i < 13; i++) {
-      const candidate = `${y}-${String(m).padStart(2, '0')}-${dd}`;
+      // Clamp to the last valid day of the month (e.g. day 31 in February → 28/29)
+      const daysInMonth = new Date(y, m, 0).getDate();
+      const clampedDay = Math.min(dd, daysInMonth);
+      const candidate = `${y}-${String(m).padStart(2, '0')}-${String(clampedDay).padStart(2, '0')}`;
       if (candidate >= today) return candidate;
       m += 1;
       if (m > 12) { m = 1; y += 1; }
@@ -64,12 +92,9 @@ export interface YearProgress {
 }
 
 export function getYearProgress(): YearProgress {
-  const now = new Date();
-  const year = now.getFullYear();
-  const start = new Date(year, 0, 1);
-  const end = new Date(year + 1, 0, 1);
-  const totalDays = Math.round((end.getTime() - start.getTime()) / 86400000);
-  const dayOfYear = Math.round((now.getTime() - start.getTime()) / 86400000) + 1;
+  const year = new Date().getFullYear();
+  const totalDays = isLeapYear(year) ? 366 : 365;
+  const dayOfYear = isoToUtcDayIndex(todayIso()) - isoToUtcDayIndex(`${year}-01-01`) + 1;
   const daysRemaining = totalDays - dayOfYear;
   const percentComplete = Math.round((dayOfYear / totalDays) * 100);
   return { year, dayOfYear, daysRemaining, totalDays, percentComplete };
@@ -89,10 +114,8 @@ export function formatDays(n: number): string {
 
 /** Convert "YYYY-MM-DD" to 1-based day-of-year */
 export function dateIsoToDayOfYear(iso: string): number {
-  const [year, month, day] = iso.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  const start = new Date(year, 0, 1);
-  return Math.round((date.getTime() - start.getTime()) / 86400000) + 1;
+  const [year] = iso.split('-').map(Number);
+  return isoToUtcDayIndex(iso) - isoToUtcDayIndex(`${year}-01-01`) + 1;
 }
 
 /** Format "YYYY-MM-DD" to display string e.g. "May 3, 2026" */
@@ -120,11 +143,7 @@ export function todayIso(): string {
 
 /** Compute days until a dateIso from today */
 export function daysUntilIso(iso: string): number {
-  const [year, month, day] = iso.split('-').map(Number);
-  const target = new Date(year, month - 1, day);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return Math.round((target.getTime() - now.getTime()) / 86400000);
+  return isoToUtcDayIndex(iso) - isoToUtcDayIndex(todayIso());
 }
 
 /**
@@ -188,7 +207,7 @@ export function buildEventDaysMap(events: MicaEvent[], currentYear: number): Map
       map.set(dateIsoToDayOfYear(ev.dateIso), ev.color);
     } else if (ev.repeats === 'Yearly') {
       // Always show at this year's position, even if the date has passed
-      const thisYearIso = `${currentYear}-${ev.dateIso.slice(5)}`;
+      const thisYearIso = safeYearlyIso(currentYear, ev.dateIso.slice(5));
       map.set(dateIsoToDayOfYear(thisYearIso), ev.color);
     } else {
       // Monthly: show the next occurrence only if it falls this year

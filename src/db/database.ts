@@ -19,6 +19,8 @@ export async function migrateDatabase(db: SQLiteDatabase): Promise<void> {
 
   if (currentVersion < 1) {
     await db.execAsync(`
+      BEGIN TRANSACTION;
+
       CREATE TABLE IF NOT EXISTS events (
         id               TEXT PRIMARY KEY,
         title            TEXT NOT NULL,
@@ -47,6 +49,8 @@ export async function migrateDatabase(db: SQLiteDatabase): Promise<void> {
         WHERE deleted_at IS NULL;
 
       INSERT INTO migrations (version, applied_at) VALUES (1, datetime('now'));
+
+      COMMIT;
     `);
   }
 

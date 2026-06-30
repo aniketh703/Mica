@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -31,13 +31,28 @@ export default function EventDetailScreen({ navigation, route }: Props) {
 
   const [event, setEvent] = useState<MicaEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  // Tracks whether we've ever successfully loaded this event, so we can tell
+  // "not found yet (still loading)" apart from "deleted elsewhere while open".
+  const hadEvent = useRef(false);
 
   useEffect(() => {
-    repo
-      .getById(route.params.eventId)
-      .then(setEvent)
-      .finally(() => setLoading(false));
-  }, [route.params.eventId, repo]);
+    function load() {
+      repo.getById(route.params.eventId).then(ev => {
+        setEvent(ev);
+        setLoading(false);
+        if (ev) {
+          hadEvent.current = true;
+        } else if (hadEvent.current) {
+          // Was loaded before, now missing — deleted from elsewhere. Don't
+          // strand the user on a dead-end screen; pop back automatically.
+          navigation.goBack();
+        }
+      });
+    }
+    load();
+    const unsub = navigation.addListener('focus', load);
+    return unsub;
+  }, [route.params.eventId, repo, navigation]);
 
   function handleDelete() {
     if (!event) return;

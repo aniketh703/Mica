@@ -1,5 +1,5 @@
 module.exports = {
-  preset: 'react-native',
+  preset: '@react-native/jest-preset',
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
   testMatch: ['**/__tests__/**/*.test.ts?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/.claude/', '/build-archive-inspect/'],

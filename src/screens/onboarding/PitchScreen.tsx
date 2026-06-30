@@ -15,7 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { RootStackParamList } from '../../types';
-import { MOTION_DURATION, motionEasing } from '../../utils/motion';
+import { duration, easeEnter, easeState } from '../../utils/motion';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -256,8 +256,8 @@ function PageDot({
 
     const animation = Animated.timing(activeProgress, {
       toValue: isActive ? 1 : 0,
-      duration: MOTION_DURATION.dot,
-      easing: motionEasing,
+      duration: duration.quick,
+      easing: easeState,
       useNativeDriver: true,
     });
 
@@ -333,7 +333,7 @@ function PaneTextBlock({
       return;
     }
 
-    const dur = MOTION_DURATION.section;
+    const dur = duration.standard;
     const pairs: [Animated.Value, Animated.Value][] = [
       [eyebrowOpacity, eyebrowTranslate],
       [titleOpacity, titleTranslate],
@@ -341,8 +341,8 @@ function PaneTextBlock({
     ];
     const animations = pairs.map(([op, tr], i) =>
       Animated.parallel([
-        Animated.timing(op, { toValue: 1, duration: dur, delay: i * 40, easing: motionEasing, useNativeDriver: true }),
-        Animated.timing(tr, { toValue: 0, duration: dur, delay: i * 40, easing: motionEasing, useNativeDriver: true }),
+        Animated.timing(op, { toValue: 1, duration: dur, delay: i * 40, easing: easeEnter, useNativeDriver: true }),
+        Animated.timing(tr, { toValue: 0, duration: dur, delay: i * 40, easing: easeEnter, useNativeDriver: true }),
       ])
     );
 
@@ -384,15 +384,21 @@ export default function PitchScreen({ navigation }: Props) {
   const reduceMotion = useReducedMotion();
   const [currentPage, setCurrentPage] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  // Guards against rapid "Next" taps desyncing the page indicator from the
+  // scroll position — only one programmatic scroll animation at a time.
+  const isAnimatingRef = useRef(false);
 
   function handleMomentumScrollEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
     setCurrentPage(page);
+    isAnimatingRef.current = false;
   }
 
   function handleNext() {
+    if (isAnimatingRef.current) return;
     if (currentPage < PANES.length - 1) {
       const nextPage = currentPage + 1;
+      isAnimatingRef.current = true;
       scrollRef.current?.scrollTo({ x: nextPage * SCREEN_WIDTH, animated: true });
       setCurrentPage(nextPage);
     } else {

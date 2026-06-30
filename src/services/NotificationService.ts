@@ -110,19 +110,23 @@ export async function scheduleEventNotifications(event: MicaEvent): Promise<stri
     return [];
   }
 
-  const id = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Mica',
-      body,
-      data: { eventId: event.id },
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: triggerDate,
-    },
-  });
-
-  return [id];
+  try {
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Mica',
+        body,
+        data: { eventId: event.id },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate,
+      },
+    });
+    return [id];
+  } catch (err) {
+    console.warn('[NotificationService] Failed to schedule notification:', err);
+    return [];
+  }
 }
 
 /** Cancel all notification IDs for an event */
@@ -132,7 +136,13 @@ export async function cancelEventNotifications(ids: string[]): Promise<void> {
     return;
   }
 
-  await Promise.all(ids.map(id => Notifications.cancelScheduledNotificationAsync(id)));
+  const results = await Promise.allSettled(
+    ids.map(id => Notifications.cancelScheduledNotificationAsync(id))
+  );
+  const failed = results.filter(r => r.status === 'rejected').length;
+  if (failed > 0) {
+    console.warn(`[NotificationService] Failed to cancel ${failed}/${ids.length} notifications`);
+  }
 }
 
 /** Cancel all scheduled notifications (used when toggling notifications off) */
