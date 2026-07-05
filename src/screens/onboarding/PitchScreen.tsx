@@ -463,7 +463,7 @@ export default function PitchScreen({ navigation }: Props) {
           onPress={handleNext}
           activeOpacity={0.85}
         >
-          <Text style={styles.ctaText}>
+          <Text style={[styles.ctaText, { color: t.onAccent }]}>
             {isLastPane ? 'Get started' : 'Next'}
           </Text>
         </TouchableOpacity>
@@ -549,7 +549,6 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFF7EC',
     letterSpacing: -0.2,
   },
 });

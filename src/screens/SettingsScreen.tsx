@@ -3,10 +3,11 @@ import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import * as H from '../utils/haptics';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useTheme, useThemeMode, ThemeMode } from '../theme/ThemeContext';
+import { useTheme, useThemeMode } from '../theme/ThemeContext';
 import { useSettings } from '../hooks/useSettings';
 import { usePremium, FREE_EVENT_LIMIT } from '../context/PremiumContext';
 import { RootStackParamList } from '../types';
+import { THEME_MODE_OPTIONS } from '../theme/themeOptions';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -19,12 +20,6 @@ const PREMIUM_FEATURES = [
   'Cross-device sync',
   'Multiple reminders per event',
   'Export your events as CSV',
-];
-
-const THEME_OPTIONS: { label: string; value: ThemeMode }[] = [
-  { label: 'System', value: 'system' },
-  { label: 'Light', value: 'light' },
-  { label: 'Dark', value: 'dark' },
 ];
 
 function Toggle({
@@ -113,14 +108,14 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
           <Text style={[styles.themeLabel, { color: t.textMuted }]}>THEME</Text>
           <View style={styles.themeRow}>
-            {THEME_OPTIONS.map(opt => {
-              const isActive = opt.value === mode;
+            {THEME_MODE_OPTIONS.map(opt => {
+              const isActive = opt.mode === mode;
               return (
                 <TouchableOpacity
-                  key={opt.value}
+                  key={opt.mode}
                   onPress={() => {
-                    setMode(opt.value);
-                    updateSetting('themeMode', opt.value);
+                    setMode(opt.mode);
+                    updateSetting('themeMode', opt.mode);
                   }}
                   style={[
                     styles.themeBtn,

@@ -15,6 +15,8 @@ import { RootStackParamList } from '../types';
 import { useEvents } from '../hooks/useEvents';
 import { dateIsoToShort, formatDays, nextOccurrenceIso, effectiveDaysUntil, isExpired } from '../utils/yearProgress';
 import CalendarView from '../components/CalendarView';
+import EventRow from '../components/EventRow';
+import EmptyState from '../components/EmptyState';
 import * as H from '../utils/haptics';
 
 type Props = {
@@ -24,63 +26,6 @@ type Props = {
 type ViewMode = 'list' | 'calendar';
 
 const FILTER_CHIPS = ['All', 'Soon', 'Birthday', 'Work', 'Travel'];
-
-// ─── Shared list row ─────────────────────────────────────────────────────────
-import { MicaEvent } from '../types';
-import { Theme } from '../theme/palette';
-
-function EventRow({
-  ev, isLast, isPast, t, onPress,
-}: {
-  ev: MicaEvent;
-  isLast: boolean;
-  isPast: boolean;
-  t: Theme;
-  onPress: () => void;
-}) {
-  const daysLeft = effectiveDaysUntil(ev);
-  // Past events show elapsed time; upcoming show countdown
-  const rightLabel = isPast
-    ? `${Math.abs(daysLeft)}d ago`
-    : formatDays(Math.max(0, daysLeft));
-  const dateLabel = dateIsoToShort(nextOccurrenceIso(ev));
-
-  return (
-    <TouchableOpacity
-      style={[
-        rowStyles.row,
-        { borderBottomColor: t.border },
-        !isLast && rowStyles.rowBorder,
-        isPast && { opacity: 0.55 },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityLabel={`${ev.title}, ${rightLabel}`}
-    >
-      <View style={[rowStyles.colorBar, { backgroundColor: ev.color }]} />
-      <View style={rowStyles.info}>
-        <Text style={[rowStyles.title, { color: t.text }]}>{ev.title}</Text>
-        <Text style={[rowStyles.date, { color: t.textMuted }]}>{dateLabel}</Text>
-      </View>
-      <View style={rowStyles.right}>
-        <Text style={[rowStyles.daysLeft, { color: t.textMuted }]}>{rightLabel}</Text>
-        <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-const rowStyles = StyleSheet.create({
-  row:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 15, minHeight: 52 },
-  rowBorder:{ borderBottomWidth: 1 },
-  colorBar: { width: 10, height: 36, borderRadius: 999, flexShrink: 0 },
-  info:     { flex: 1, gap: 3 },
-  title:    { fontSize: 15, fontWeight: '600' },
-  date:     { fontSize: 14 },
-  right:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  daysLeft: { fontSize: 14, fontWeight: '700' },
-});
 
 export default function EventsScreen({ navigation }: Props) {
   const t = useTheme();
@@ -165,7 +110,7 @@ export default function EventsScreen({ navigation }: Props) {
                 <Ionicons
                   name="list-outline"
                   size={18}
-                  color={viewMode === 'list' ? '#FFF7EC' : t.textMuted}
+                  color={viewMode === 'list' ? t.onAccent : t.textMuted}
                 />
               </TouchableOpacity>
               <TouchableOpacity
@@ -178,7 +123,7 @@ export default function EventsScreen({ navigation }: Props) {
                 <Ionicons
                   name="calendar-outline"
                   size={18}
-                  color={viewMode === 'calendar' ? '#FFF7EC' : t.textMuted}
+                  color={viewMode === 'calendar' ? t.onAccent : t.textMuted}
                 />
               </TouchableOpacity>
             </View>
@@ -190,7 +135,7 @@ export default function EventsScreen({ navigation }: Props) {
               accessibilityLabel="Add event"
               accessibilityRole="button"
             >
-              <Ionicons name="add" size={22} color="#FFF7EC" />
+              <Ionicons name="add" size={22} color={t.onAccent} />
             </TouchableOpacity>
           </View>
         </View>
@@ -217,7 +162,7 @@ export default function EventsScreen({ navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityState={{ selected: isActive }}
                   >
-                    <Text style={[styles.chipText, { color: isActive ? '#FFF7EC' : t.textMuted }]}>
+                    <Text style={[styles.chipText, { color: isActive ? t.onAccent : t.textMuted }]}>
                       {chip}
                     </Text>
                   </TouchableOpacity>
@@ -240,17 +185,12 @@ export default function EventsScreen({ navigation }: Props) {
           />
         ) : filtered.length === 0 ? (
           /* Empty state */
-          <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={styles.emptyEmoji}>📅</Text>
-            <Text style={[styles.emptyTitle, { color: t.textMuted }]}>
-              {events.length === 0 ? 'No events yet' : 'Nothing in this category'}
-            </Text>
-            {events.length === 0 && (
-              <TouchableOpacity onPress={() => navigation.navigate('AddEvent', {})}>
-                <Text style={[styles.emptyAction, { color: t.accentStrong }]}>+ Add your first event</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <EmptyState
+            t={t}
+            title={events.length === 0 ? 'No events yet' : 'Nothing in this category'}
+            actionLabel={events.length === 0 ? '+ Add your first event' : undefined}
+            onAction={() => navigation.navigate('AddEvent', {})}
+          />
         ) : (
           /* List view — upcoming + collapsible past section */
           <>
@@ -262,10 +202,11 @@ export default function EventsScreen({ navigation }: Props) {
                 {upcomingEvents.map((ev, i) => (
                   <EventRow
                     key={ev.id}
-                    ev={ev}
-                    isLast={i === upcomingEvents.length - 1}
-                    isPast={false}
+                    event={ev}
                     t={t}
+                    subtitle={dateIsoToShort(nextOccurrenceIso(ev))}
+                    rightLabel={formatDays(Math.max(0, effectiveDaysUntil(ev)))}
+                    isLast={i === upcomingEvents.length - 1}
                     onPress={() => {
                       H.impactAsync(H.ImpactFeedbackStyle.Light);
                       navigation.navigate('EventDetail', { eventId: ev.id });
@@ -278,19 +219,24 @@ export default function EventsScreen({ navigation }: Props) {
             {pastEvents.length > 0 && (
               <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
                 <Text style={[styles.cardEyebrow, { color: t.textMuted }]}>PAST</Text>
-                {pastEvents.map((ev, i) => (
-                  <EventRow
-                    key={ev.id}
-                    ev={ev}
-                    isLast={i === pastEvents.length - 1}
-                    isPast={true}
-                    t={t}
-                    onPress={() => {
-                      H.impactAsync(H.ImpactFeedbackStyle.Light);
-                      navigation.navigate('EventDetail', { eventId: ev.id });
-                    }}
-                  />
-                ))}
+                {pastEvents.map((ev, i) => {
+                  const daysLeft = effectiveDaysUntil(ev);
+                  return (
+                    <EventRow
+                      key={ev.id}
+                      event={ev}
+                      t={t}
+                      subtitle={dateIsoToShort(nextOccurrenceIso(ev))}
+                      rightLabel={`${Math.abs(daysLeft)}d ago`}
+                      isLast={i === pastEvents.length - 1}
+                      dimmed
+                      onPress={() => {
+                        H.impactAsync(H.ImpactFeedbackStyle.Light);
+                        navigation.navigate('EventDetail', { eventId: ev.id });
+                      }}
+                    />
+                  );
+                })}
               </View>
             )}
           </>
@@ -374,19 +320,6 @@ const styles = StyleSheet.create({
 
   loader: { marginTop: 40 },
 
-  // ── Empty state ───────────────────────────────────────────────────
-  emptyCard: {
-    borderRadius: 24,
-    padding: 32,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyEmoji: { fontSize: 32, marginBottom: 4 },
-  emptyTitle: { fontSize: 15, fontWeight: '500' },
-  emptyAction: { fontSize: 15, fontWeight: '700', marginTop: 4 },
-
   // ── Event list card ───────────────────────────────────────────────
   card: { borderRadius: 24, padding: 18, borderWidth: 1, gap: 4 },
   // Eyebrow pattern — consistent with CalendarView's day-events header
@@ -396,23 +329,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 6,
   },
-  eventRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 15,
-    minHeight: 52,
-  },
-  eventRowBorder: { borderBottomWidth: 1 },
-  // width:10 matches CalendarView's colorBar for cross-screen consistency
-  colorBar: { width: 10, height: 36, borderRadius: 999, flexShrink: 0 },
-  eventInfo: { flex: 1, gap: 3 },
-  // 15px matches CalendarView's eventTitle
-  eventTitle: { fontSize: 15, fontWeight: '600' },
-  eventDate: { fontSize: 14 },
-  eventRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  // textMuted matches CalendarView — countdown is supporting info, not primary
-  daysLeft: { fontSize: 14, fontWeight: '700' },
 
   bottomPad: { height: 8 },
 });

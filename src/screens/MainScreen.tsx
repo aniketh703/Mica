@@ -21,7 +21,7 @@ export default function MainScreen({ navigation }: Props) {
       {/* Keep all tabs mounted (display:none when inactive) so scroll position
           and local state survive switching tabs, instead of remounting. */}
       <View style={activeTab === 'home' ? styles.tabPane : styles.hidden}>
-        <HomeScreen navigation={navigation} />
+        <HomeScreen navigation={navigation} isActive={activeTab === 'home'} />
       </View>
       <View style={activeTab === 'events' ? styles.tabPane : styles.hidden}>
         <EventsScreen navigation={navigation} />

@@ -132,6 +132,11 @@ export function dateIsoToShort(iso: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/** Convert a Date to "YYYY-MM-DD" using local calendar fields (not UTC). */
+export function dateToIso(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 /** Get today's date as "YYYY-MM-DD" */
 export function todayIso(): string {
   const now = new Date();

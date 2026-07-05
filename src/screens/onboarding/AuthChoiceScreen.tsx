@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   privacyCard: {
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 18,
     borderWidth: 1,
     marginTop: 36,

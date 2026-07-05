@@ -19,6 +19,11 @@ import { useEventRepository } from '../../hooks/useEventRepository';
 import { RootStackParamList, InterestCategory } from '../../types';
 import { ThemeMode } from '../../theme/ThemeContext';
 import { requestNotificationPermission } from '../../services/NotificationService';
+import { EVENT_COLORS as SHARED_EVENT_COLORS } from '../../theme/eventColors';
+import { mica, midnight } from '../../theme/palette';
+import { THEME_MODE_OPTIONS } from '../../theme/themeOptions';
+import ColorSwatchPicker from '../../components/ColorSwatchPicker';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, 'Onboarding'>;
@@ -38,41 +43,17 @@ const INTERESTS: { label: InterestCategory; color: string }[] = [
 ];
 
 // ─── Theme mode option data ───────────────────────────────────────────────────
-const THEME_OPTIONS: {
-  mode: ThemeMode;
-  label: string;
-  sub: string;
-  swatches: string[];
-}[] = [
-  {
-    mode: 'system',
-    label: 'System',
-    sub: 'Follows device',
-    swatches: ['#F5F1EA', '#9F7A45', '#2E2A26'],
-  },
-  {
-    mode: 'light',
-    label: 'Light',
-    sub: 'Always light',
-    swatches: ['#F5F1EA', '#D6B98C', '#9F7A45'],
-  },
-  {
-    mode: 'dark',
-    label: 'Dark',
-    sub: 'Always dark',
-    swatches: ['#171919', '#D1B17C', '#F3EFE8'],
-  },
-];
+// Mode/label pairing comes from the shared THEME_MODE_OPTIONS (same source
+// SettingsScreen uses); this screen adds its own preview-card details.
+const THEME_PREVIEW: Record<ThemeMode, { sub: string; swatches: string[] }> = {
+  system: { sub: 'Follows device', swatches: [mica.background, mica.accentStrong, mica.text] },
+  light:  { sub: 'Always light', swatches: [mica.background, mica.accent, mica.accentStrong] },
+  dark:   { sub: 'Always dark', swatches: [midnight.background, midnight.accent, midnight.text] },
+};
+const THEME_OPTIONS = THEME_MODE_OPTIONS.map(opt => ({ ...opt, ...THEME_PREVIEW[opt.mode] }));
 
 // ─── Color swatches for step 5 ────────────────────────────────────────────────
-const EVENT_COLORS = [
-  '#C86B5A',
-  '#9F7A45',
-  '#547A76',
-  '#D6B98C',
-  '#6B7FA4',
-  '#8A6BA4',
-];
+const EVENT_COLORS: string[] = [...SHARED_EVENT_COLORS];
 
 // ─── Helper: default date (today + 30 days) ───────────────────────────────────
 function defaultEventDateIso(): string {
@@ -93,6 +74,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
   const { mode: currentMode, setMode } = useThemeMode();
   const { updateSetting } = useSettings();
   const repo = useEventRepository();
+  const reduceMotion = useReducedMotion();
 
   const step = route.params?.step ?? 1;
 
@@ -108,6 +90,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
 
   // Step 5 state
   const [eventName, setEventName] = useState('');
+  const [eventNameFocused, setEventNameFocused] = useState(false);
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
   const [eventDate]    = useState(defaultEventDate());
   const [eventDateIso] = useState(defaultEventDateIso());
@@ -212,7 +195,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
         disabled={disabled}
         activeOpacity={0.85}
       >
-        <Text style={styles.ctaBtnText}>{label}</Text>
+        <Text style={[styles.ctaBtnText, { color: disabled ? t.textMuted : t.onAccent }]}>{label}</Text>
       </TouchableOpacity>
     );
   }
@@ -309,7 +292,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
                   style={[
                     styles.pillText,
                     {
-                      color: isSelected ? '#FFF7EC' : t.text,
+                      color: isSelected ? t.onAccent : t.text,
                       fontWeight: isSelected ? '700' : '500',
                     },
                   ]}
@@ -440,7 +423,9 @@ export default function OnboardingScreen({ navigation, route }: Props) {
                   },
                 ]}
               >
-                <Text style={styles.featureIconText}>{row.icon}</Text>
+                <Text style={[styles.featureIconText, { color: row.muted ? t.textMuted : '#FFFFFF' }]}>
+                  {row.icon}
+                </Text>
               </View>
               <Text style={[styles.featureText, { color: row.muted ? t.textMuted : t.text }]}>
                 {row.text}
@@ -481,7 +466,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
           {/* Event form card */}
           <View style={[styles.formCard, { backgroundColor: t.surface, borderColor: t.border }]}>
             {/* Event name */}
-            <View style={[styles.formRow, { borderBottomColor: t.border }]}>
+            <View style={[styles.formRow, { borderBottomColor: eventNameFocused ? t.accentStrong : t.border }]}>
               <Text style={[styles.formLabel, { color: t.textMuted }]}>EVENT NAME</Text>
               <TextInput
                 style={[styles.formInput, { color: t.text }]}
@@ -489,6 +474,8 @@ export default function OnboardingScreen({ navigation, route }: Props) {
                 placeholderTextColor={t.textMuted}
                 value={eventName}
                 onChangeText={setEventName}
+                onFocus={() => setEventNameFocused(true)}
+                onBlur={() => setEventNameFocused(false)}
                 returnKeyType="done"
               />
             </View>
@@ -508,21 +495,14 @@ export default function OnboardingScreen({ navigation, route }: Props) {
 
             {/* Color row */}
             <View style={styles.formRowLast}>
-              <Text style={[styles.formLabel, { color: t.textMuted }]}>COLOUR</Text>
-              <View style={styles.colorSwatchRow}>
-                {EVENT_COLORS.map((color, idx) => (
-                  <TouchableOpacity
-                    key={color}
-                    onPress={() => setSelectedColorIdx(idx)}
-                    activeOpacity={0.8}
-                    style={[
-                      styles.colorSwatch,
-                      { backgroundColor: color },
-                      selectedColorIdx === idx && styles.colorSwatchSelected,
-                    ]}
-                  />
-                ))}
-              </View>
+              <Text style={[styles.formLabel, { color: t.textMuted }]}>COLOR</Text>
+              <ColorSwatchPicker
+                colors={EVENT_COLORS}
+                selectedColor={EVENT_COLORS[selectedColorIdx]}
+                onSelect={color => setSelectedColorIdx(EVENT_COLORS.indexOf(color))}
+                reduceMotion={reduceMotion}
+                t={t}
+              />
             </View>
           </View>
 
@@ -755,7 +735,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   featureIconText: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -766,7 +745,7 @@ const styles = StyleSheet.create({
 
   // Step 5: event form
   formCard: {
-    borderRadius: 20,
+    borderRadius: 24,
     borderWidth: 1,
     overflow: 'hidden',
     marginTop: 4,
@@ -789,25 +768,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  colorSwatchRow: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  colorSwatch: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-  },
-  colorSwatchSelected: {
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
 
   // CTA button
   ctaBtn: {
@@ -818,7 +778,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   ctaBtnText: {
-    color: '#FFF7EC',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.2,

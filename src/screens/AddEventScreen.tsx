@@ -17,12 +17,14 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import DateTimePicker, { DateTimePickerChangeEvent } from '@react-native-community/datetimepicker';
 import { useTheme } from '../theme/ThemeContext';
-import { Theme } from '../theme/palette';
+import { EVENT_COLORS } from '../theme/eventColors';
+import ColorSwatchPicker from '../components/ColorSwatchPicker';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useEventRepository } from '../hooks/useEventRepository';
 import { usePremium, FREE_EVENT_LIMIT } from '../context/PremiumContext';
 import { RootStackParamList, EventTypeOption, RepeatOption, ReminderOption } from '../types';
-import { dateIsoToDisplay } from '../utils/yearProgress';
+import { EVENT_TYPES, EVENT_TYPE_ICONS } from '../constants/eventTypes';
+import { dateIsoToDisplay, dateToIso } from '../utils/yearProgress';
 import { duration, easeEnter } from '../utils/motion';
 import {
   scheduleEventNotifications,
@@ -34,17 +36,6 @@ type Props = {
   route: RouteProp<RootStackParamList, 'AddEvent'>;
 };
 
-const EVENT_TYPES: EventTypeOption[] = ['Birthday', 'Deadline', 'Vacation', 'Milestone', 'Other'];
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-const EVENT_TYPE_ICONS: Record<EventTypeOption, IoniconName> = {
-  Birthday: 'gift-outline',
-  Deadline: 'timer-outline',
-  Vacation: 'airplane-outline',
-  Milestone: 'trophy-outline',
-  Other:    'ellipsis-horizontal-circle-outline',
-};
-const COLOR_SWATCHES = ['#C86B5A', '#9F7A45', '#547A76', '#D6B98C', '#6B7FA4', '#8A6BA4'];
 const REPEAT_OPTIONS: RepeatOption[] = ['None', 'Yearly', 'Monthly'];
 const REMINDER_OPTIONS: ReminderOption[] = [
   'None',
@@ -54,55 +45,10 @@ const REMINDER_OPTIONS: ReminderOption[] = [
   '1 week before',
 ];
 
-function ColorSwatch({
-  c,
-  isSelected,
-  onPress,
-  reduceMotion,
-  t,
-}: {
-  c: string;
-  isSelected: boolean;
-  onPress: () => void;
-  reduceMotion: boolean;
-  t: Theme;
-}) {
-  const [scale] = useState(() => new Animated.Value(1));
-
-  function handlePress() {
-    onPress();
-    if (!reduceMotion) {
-      scale.setValue(1);
-      Animated.sequence([
-        Animated.timing(scale, { toValue: 1.08, duration: 75, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1, duration: 75, useNativeDriver: true }),
-      ]).start();
-    }
-  }
-
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      style={[
-        styles.swatchOuter,
-        isSelected
-          ? { borderColor: t.accentStrong, borderWidth: 2.5 }
-          : { borderColor: 'transparent', borderWidth: 2.5 },
-      ]}
-    >
-      <Animated.View style={[styles.swatch, { backgroundColor: c, transform: [{ scale }] }]} />
-    </TouchableOpacity>
-  );
-}
-
 function defaultDateIso(): string {
   const d = new Date();
   d.setDate(d.getDate() + 30);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function dateToIso(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return dateToIso(d);
 }
 
 export default function AddEventScreen({ navigation, route }: Props) {
@@ -120,10 +66,13 @@ export default function AddEventScreen({ navigation, route }: Props) {
   const [dateIso, setDateIso] = useState(defaultDateIso());
   const [repeats, setRepeats] = useState<RepeatOption>('None');
   const [reminder, setReminder] = useState<ReminderOption>('None');
-  const [color, setColor] = useState(COLOR_SWATCHES[0]);
+  const [color, setColor] = useState<string>(EVENT_COLORS[0]);
   const [note, setNote] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [titleFocused, setTitleFocused] = useState(false);
+  const [noteFocused, setNoteFocused] = useState(false);
   const [existingNotifIds, setExistingNotifIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -203,6 +152,7 @@ export default function AddEventScreen({ navigation, route }: Props) {
 
   async function handleSave() {
     if (!title.trim() || saving) return;
+    setErrorMessage(null);
     if (!isEdit && !canAddEvent) {
       Alert.alert(
         'Free limit reached',
@@ -245,7 +195,7 @@ export default function AddEventScreen({ navigation, route }: Props) {
       navigation.goBack();
     } catch {
       H.notificationAsync(H.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Could not save event. Please try again.');
+      setErrorMessage('Could not save event. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -280,14 +230,22 @@ export default function AddEventScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {errorMessage && (
+          <View style={[styles.errorBanner, { backgroundColor: t.danger + '18', borderColor: t.danger }]}>
+            <Text style={[styles.errorBannerText, { color: t.danger }]}>{errorMessage}</Text>
+          </View>
+        )}
+
         {/* Name field */}
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
           <View style={[styles.cardBloom, { backgroundColor: t.accentSoft }]} />
           <Text style={[styles.fieldLabel, { color: t.textMuted }]}>EVENT NAME</Text>
           <TextInput
-            style={[styles.nameInput, { color: t.text, borderBottomColor: t.accentStrong }]}
+            style={[styles.nameInput, { color: t.text, borderBottomColor: titleFocused ? t.accentStrong : t.border }]}
             value={title}
             onChangeText={setTitle}
+            onFocus={() => setTitleFocused(true)}
+            onBlur={() => setTitleFocused(false)}
             placeholder="What's the occasion?"
             placeholderTextColor={t.textMuted}
             autoFocus={!isEdit}
@@ -300,7 +258,7 @@ export default function AddEventScreen({ navigation, route }: Props) {
           <View style={styles.chipsRow}>
             {EVENT_TYPES.map(tp => {
               const isSelected = tp === type;
-              const chipColor = isSelected ? '#FFF7EC' : t.textMuted;
+              const chipColor = isSelected ? t.onAccent : t.textMuted;
               return (
                 <TouchableOpacity
                   key={tp}
@@ -385,30 +343,27 @@ export default function AddEventScreen({ navigation, route }: Props) {
         {/* Color card */}
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
           <Text style={[styles.fieldLabel, { color: t.textMuted }]}>COLOR</Text>
-          <View style={styles.swatchRow}>
-            {COLOR_SWATCHES.map(c => (
-              <ColorSwatch
-                key={c}
-                c={c}
-                isSelected={color === c}
-                onPress={() => {
-                  H.selectionAsync();
-                  setColor(c);
-                }}
-                reduceMotion={reduceMotion}
-                t={t}
-              />
-            ))}
-          </View>
+          <ColorSwatchPicker
+            colors={EVENT_COLORS}
+            selectedColor={color}
+            onSelect={c => {
+              H.selectionAsync();
+              setColor(c);
+            }}
+            reduceMotion={reduceMotion}
+            t={t}
+          />
         </View>
 
         {/* Note card */}
-        <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+        <View style={[styles.card, { backgroundColor: t.surface, borderColor: noteFocused ? t.accentStrong : t.border }]}>
           <Text style={[styles.fieldLabel, { color: t.textMuted }]}>NOTE</Text>
           <TextInput
             style={[styles.noteInput, { color: t.text }]}
             value={note}
             onChangeText={setNote}
+            onFocus={() => setNoteFocused(true)}
+            onBlur={() => setNoteFocused(false)}
             placeholder="Add a note…"
             placeholderTextColor={t.textMuted}
             multiline
@@ -439,23 +394,22 @@ const styles = StyleSheet.create({
   navSave: { fontSize: 15, fontWeight: '700' },
   scroll: { flex: 1 },
   content: { padding: 22, gap: 16 },
-  card: { borderRadius: 20, padding: 18, borderWidth: 1, overflow: 'hidden', position: 'relative', gap: 12 },
+  errorBanner: { borderRadius: 14, padding: 14, borderWidth: 1 },
+  errorBannerText: { fontSize: 14, fontWeight: '600' },
+  card: { borderRadius: 24, padding: 18, borderWidth: 1, overflow: 'hidden', position: 'relative', gap: 12 },
   cardBloom: { position: 'absolute', width: 180, height: 180, borderRadius: 90, top: -70, right: -50, opacity: 0.38 },
   fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 2 },
   nameInput: { fontSize: 18, fontWeight: '600', paddingVertical: 10, borderBottomWidth: 2 },
   chipsRow: { flexDirection: 'row', gap: 8 },
   chip: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 999, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6 },
   chipText: { fontSize: 14, fontWeight: '600' },
-  whenCard: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
+  whenCard: { borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
   whenRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 18, minHeight: 52 },
   whenRowBorder: { borderBottomWidth: 1 },
   whenLabel: { fontSize: 16 },
   whenRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   whenValue: { fontSize: 16, fontWeight: '600' },
   chevron: { fontSize: 18, lineHeight: 18 },
-  swatchRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  swatchOuter: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  swatch: { width: 34, height: 34, borderRadius: 17 },
   noteInput: { fontSize: 15, minHeight: 80, fontStyle: 'italic' },
   bottomPad: { height: 24 },
 });

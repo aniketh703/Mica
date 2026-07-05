@@ -8,7 +8,6 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import * as H from '../utils/haptics';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -18,6 +17,7 @@ import { RootStackParamList, MicaEvent } from '../types';
 import { getYearProgress, dateIsoToDisplay, nextOccurrenceIso, effectiveDaysUntil, dateIsoToDayOfYear } from '../utils/yearProgress';
 import { cancelEventNotifications } from '../services/NotificationService';
 import LifeCalendarGrid from '../components/LifeCalendarGrid';
+import BackRow from '../components/BackRow';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, 'EventDetail'>;
@@ -116,10 +116,7 @@ export default function EventDetailScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {/* Back */}
-        <TouchableOpacity style={styles.backRow} onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={20} color={t.accentStrong} />
-          <Text style={[styles.backText, { color: t.accentStrong }]}>Events</Text>
-        </TouchableOpacity>
+        <BackRow t={t} label="Events" onPress={() => navigation.goBack()} />
 
         {/* Title */}
         <View style={styles.titleRow}>
@@ -212,8 +209,6 @@ const styles = StyleSheet.create({
   bloom: { position: 'absolute', width: 260, height: 260, borderRadius: 130, top: -80, right: -100, opacity: 0.09 },
   scroll: { flex: 1 },
   content: { padding: 22, paddingTop: 56, gap: 16 },
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 },
-  backText: { fontSize: 16, fontWeight: '500' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 4 },
   titleBar: { width: 12, height: 52, borderRadius: 999, flexShrink: 0 },
   titleText: { fontSize: 30, fontWeight: '800', letterSpacing: -0.8, lineHeight: 34 },

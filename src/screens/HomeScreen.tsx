@@ -11,6 +11,7 @@ import {
   Animated,
   DimensionValue,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as H from '../utils/haptics';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../theme/ThemeContext';
@@ -26,19 +27,35 @@ import {
   isExpired,
 } from '../utils/yearProgress';
 import YearGrid from '../components/YearGrid';
+import EventRow from '../components/EventRow';
+import EmptyState from '../components/EmptyState';
+import BottomSheet from '../components/BottomSheet';
+import QuickAddEventSheet from '../components/QuickAddEventSheet';
 import AnimatedMountView, { useEnterAnimation } from '../components/AnimatedMountView';
 import { duration } from '../utils/motion';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList>;
+  // Whether the Home tab is the one currently shown. MainScreen keeps all
+  // tabs mounted (toggling display:none) rather than unmounting them, but
+  // RN's Modal renders as a native overlay independent of that display:none —
+  // so without this, the quick-add sheet could keep floating over another
+  // tab if the user switched away while it was open.
+  isActive: boolean;
 };
 
 
-export default function HomeScreen({ navigation }: Props) {
+export default function HomeScreen({ navigation, isActive }: Props) {
   const t = useTheme();
-  const { events, loading, refresh } = useEvents();
+  const { events, loading, refresh, createEvent } = useEvents();
   const [refreshing, setRefreshing] = useState(false);
   const [focusKey, setFocusKey] = useState(0);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const closeSheet = () => setSheetVisible(false);
+
+  useEffect(() => {
+    if (!isActive) setSheetVisible(false);
+  }, [isActive]);
   const contentEnterStyle = useEnterAnimation({
     duration: duration.enter,
     fromTranslateY: 10,
@@ -178,15 +195,13 @@ export default function HomeScreen({ navigation }: Props) {
             key="empty"
             config={{ duration: duration.standard, fromScale: 0.96 }}
           >
-            <TouchableOpacity
-              style={[styles.card, styles.emptyCard, { backgroundColor: t.surface, borderColor: t.border }]}
-              onPress={() => navigation.navigate('AddEvent', {})}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.emptyEmoji}>📅</Text>
-              <Text style={[styles.emptyTitle, { color: t.textMuted }]}>Nothing on the horizon</Text>
-              <Text style={[styles.emptyAction, { color: t.accentStrong }]}>+ Add an event</Text>
-            </TouchableOpacity>
+            <EmptyState
+              t={t}
+              title="Nothing on the horizon"
+              actionLabel="+ Add an event"
+              wholeCardPressable
+              onAction={() => setSheetVisible(true)}
+            />
           </AnimatedMountView>
         )}
 
@@ -228,27 +243,16 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
               <Text style={[styles.sectionTitle, { color: t.text }]}>More coming up</Text>
               {rest.map((ev, i) => (
-                <TouchableOpacity
+                <EventRow
                   key={ev.id}
-                  style={[
-                    styles.eventRow,
-                    { borderBottomColor: t.border },
-                    i < rest.length - 1 && styles.eventRowBorder,
-                  ]}
+                  event={ev}
+                  t={t}
+                  subtitle={dateIsoToShort(nextOccurrenceIso(ev))}
+                  rightLabel={formatDays(Math.max(0, effectiveDaysUntil(ev)))}
+                  isLast={i === rest.length - 1}
+                  showChevron={false}
                   onPress={() => navigation.navigate('EventDetail', { eventId: ev.id })}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.colorBar, { backgroundColor: ev.color, height: 34 }]} />
-                  <View style={styles.eventInfo}>
-                    <Text style={[styles.eventTitle, { color: t.text }]}>{ev.title}</Text>
-                    <Text style={[styles.eventDate, { color: t.textMuted }]}>
-                      {dateIsoToShort(nextOccurrenceIso(ev))}
-                    </Text>
-                  </View>
-                  <Text style={[styles.daysLeft, { color: t.textMuted }]}>
-                    {formatDays(Math.max(0, effectiveDaysUntil(ev)))}
-                  </Text>
-                </TouchableOpacity>
+                />
               ))}
             </View>
           </AnimatedMountView>
@@ -256,6 +260,24 @@ export default function HomeScreen({ navigation }: Props) {
 
         <View style={styles.bottomPad} />
       </ScrollView>
+
+      {/* FAB — add event */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: t.accentStrong }]}
+        onPress={() => {
+          H.impactAsync(H.ImpactFeedbackStyle.Light);
+          setSheetVisible(true);
+        }}
+        activeOpacity={0.85}
+        accessibilityLabel="Add event"
+        accessibilityRole="button"
+      >
+        <Ionicons name="add" size={28} color={t.onAccent} />
+      </TouchableOpacity>
+
+      <BottomSheet visible={sheetVisible && isActive} onClose={closeSheet} t={t}>
+        <QuickAddEventSheet t={t} onClose={closeSheet} createEvent={createEvent} />
+      </BottomSheet>
     </Animated.View>
   );
 }
@@ -263,6 +285,21 @@ export default function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, position: 'relative' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  fab: {
+    position: 'absolute',
+    right: 22,
+    bottom: 102,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   bloom: {
     position: 'absolute',
     width: 280,
@@ -277,13 +314,9 @@ const styles = StyleSheet.create({
   dateHeader: { paddingTop: 8, gap: 2 },
   dayName: { fontSize: 12, fontWeight: '700', letterSpacing: 3 },
   dateStr: { fontSize: 28, fontWeight: '800', letterSpacing: -0.8, lineHeight: 32 },
-  card: { borderRadius: 28, padding: 20, borderWidth: 1, overflow: 'hidden', position: 'relative' },
+  card: { borderRadius: 24, padding: 20, borderWidth: 1, overflow: 'hidden', position: 'relative' },
   cardLarge: { gap: 14 },
   yearCard: { gap: 16 },
-  emptyCard: { alignItems: 'center', paddingVertical: 32, gap: 8, borderStyle: 'dashed' },
-  emptyEmoji: { fontSize: 32, marginBottom: 4 },
-  emptyTitle: { fontSize: 15, fontWeight: '500' },
-  emptyAction: { fontSize: 15, fontWeight: '700', marginTop: 4 },
   cardBloom: {
     position: 'absolute',
     width: 200,
@@ -314,11 +347,5 @@ const styles = StyleSheet.create({
   yearMetaNum: { fontSize: 28, fontWeight: '800', letterSpacing: -1, lineHeight: 28 },
   yearMetaLabel: { fontSize: 12, marginTop: 2 },
   sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4, letterSpacing: -0.3 },
-  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, minHeight: 44 },
-  eventRowBorder: { borderBottomWidth: 1 },
-  eventInfo: { flex: 1, gap: 2 },
-  eventTitle: { fontSize: 15, fontWeight: '600' },
-  eventDate: { fontSize: 13 },
-  daysLeft: { fontSize: 14, fontWeight: '700' },
   bottomPad: { height: 8 },
 });

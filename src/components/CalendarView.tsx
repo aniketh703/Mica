@@ -11,6 +11,7 @@ import { Theme } from '../theme/palette';
 import { MicaEvent } from '../types';
 import * as H from '../utils/haptics';
 import { dateIsoToDisplay, formatDays, effectiveDaysUntil } from '../utils/yearProgress';
+import EventRow from './EventRow';
 
 const DOW_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const MONTH_NAMES = [
@@ -184,7 +185,7 @@ export default function CalendarView({ events, t, onEventPress, onAddPress }: Pr
                         {
                           // Single-opacity dimming: keeps t.text baseline so contrast
                           // stays adequate even at 0.28 (≈3.6:1 on light theme).
-                          color:      isToday ? '#FFF7EC' : t.text,
+                          color:      isToday ? t.onAccent : t.text,
                           opacity:    isPast ? 0.28 : 1,
                           fontWeight: isToday || isSelected ? '700' : '400',
                         },
@@ -228,31 +229,18 @@ export default function CalendarView({ events, t, onEventPress, onAddPress }: Pr
           </View>
         ) : (
           selectedEvents.map((ev, i) => (
-            <TouchableOpacity
+            <EventRow
               key={ev.id}
-              style={[
-                styles.eventRow,
-                { borderBottomColor: t.border },
-                i < selectedEvents.length - 1 && styles.eventRowBorder,
-              ]}
+              event={ev}
+              t={t}
+              subtitle={ev.type}
+              rightLabel={formatDays(Math.max(0, effectiveDaysUntil(ev)))}
+              isLast={i === selectedEvents.length - 1}
               onPress={() => {
                 H.impactAsync(H.ImpactFeedbackStyle.Light);
                 onEventPress(ev.id);
               }}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`${ev.title}, ${formatDays(Math.max(0, effectiveDaysUntil(ev)))}`}
-            >
-              <View style={[styles.colorBar, { backgroundColor: ev.color }]} />
-              <View style={styles.eventInfo}>
-                <Text style={[styles.eventTitle, { color: t.text }]}>{ev.title}</Text>
-                <Text style={[styles.eventType,  { color: t.textMuted }]}>{ev.type}</Text>
-              </View>
-              <Text style={[styles.daysLeft, { color: t.textMuted }]}>
-                {formatDays(Math.max(0, effectiveDaysUntil(ev)))}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
-            </TouchableOpacity>
+            />
           ))
         )}
       </View>
@@ -354,37 +342,6 @@ const styles = StyleSheet.create({
   },
   emptyAction: {
     fontSize: 15,
-    fontWeight: '700',
-  },
-  eventRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 13,
-    minHeight: 52,
-  },
-  eventRowBorder: {
-    borderBottomWidth: 1,
-  },
-  colorBar: {
-    width: 10,
-    height: 34,
-    borderRadius: 999,
-    flexShrink: 0,
-  },
-  eventInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  eventTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  eventType: {
-    fontSize: 13,
-  },
-  daysLeft: {
-    fontSize: 14,
     fontWeight: '700',
   },
 });
