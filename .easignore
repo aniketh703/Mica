@@ -1,7 +1,6 @@
 # Exclude local tooling dirs that contain symlinks/junctions
 .claude/
 .agents/
-build-archive-inspect/
 
 # Dev artifacts
 node_modules/
