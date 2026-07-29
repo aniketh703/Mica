@@ -10,7 +10,7 @@
     ],
     "icon": "./assets/icon.png",
     "android": {
-      "package": "com.mica.app",
+      "package": "com.aniketh.mica",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -29,7 +29,7 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.mica.app",
+      "bundleIdentifier": "com.aniketh.mica",
       "supportsTablet": false,
       "infoPlist": {
         "NSUserNotificationUsageDescription": "Mica reminds you about your events."
