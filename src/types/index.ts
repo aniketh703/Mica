@@ -28,7 +28,6 @@ export type RootStackParamList = {
   Main: undefined;
   EventDetail: { eventId: string };
   AddEvent: { eventId?: string };
-  Invite: undefined;
 };
 
 export type EventTypeOption = 'Birthday' | 'Deadline' | 'Vacation' | 'Milestone' | 'Other';

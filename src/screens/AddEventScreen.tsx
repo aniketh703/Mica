@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   StyleSheet,
   Platform,
   LayoutAnimation,
@@ -21,7 +20,6 @@ import { EVENT_COLORS } from '../theme/eventColors';
 import ColorSwatchPicker from '../components/ColorSwatchPicker';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useEventRepository } from '../hooks/useEventRepository';
-import { usePremium, FREE_EVENT_LIMIT } from '../context/PremiumContext';
 import { RootStackParamList, EventTypeOption, RepeatOption, ReminderOption } from '../types';
 import { EVENT_TYPES, EVENT_TYPE_ICONS } from '../constants/eventTypes';
 import { dateIsoToDisplay, dateToIso } from '../utils/yearProgress';
@@ -54,7 +52,6 @@ function defaultDateIso(): string {
 export default function AddEventScreen({ navigation, route }: Props) {
   const t = useTheme();
   const repo = useEventRepository();
-  const { canAddEvent, refreshCount } = usePremium();
   const reduceMotion = useReducedMotion();
   const [pickerOpacity] = useState(() => new Animated.Value(1));
 
@@ -153,13 +150,6 @@ export default function AddEventScreen({ navigation, route }: Props) {
   async function handleSave() {
     if (!title.trim() || saving) return;
     setErrorMessage(null);
-    if (!isEdit && !canAddEvent) {
-      Alert.alert(
-        'Free limit reached',
-        `You've used all ${FREE_EVENT_LIMIT} free events. Delete an existing event to add a new one.`
-      );
-      return;
-    }
     setSaving(true);
     try {
       if (isEdit && editId) {
@@ -189,7 +179,6 @@ export default function AddEventScreen({ navigation, route }: Props) {
         });
         const ids = await scheduleEventNotifications(ev);
         if (ids.length > 0) await repo.update(ev.id, { notificationIds: ids });
-        await refreshCount();
       }
       H.notificationAsync(H.NotificationFeedbackType.Success);
       navigation.goBack();

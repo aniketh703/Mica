@@ -10,7 +10,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Platform,
   StyleSheet,
 } from 'react-native';
@@ -22,7 +21,6 @@ import { EVENT_COLORS } from '../theme/eventColors';
 import { EVENT_TYPES, EVENT_TYPE_ICONS } from '../constants/eventTypes';
 import ColorSwatchPicker from './ColorSwatchPicker';
 import { useReducedMotion } from '../hooks/useReducedMotion';
-import { usePremium, FREE_EVENT_LIMIT } from '../context/PremiumContext';
 import { dateIsoToDisplay, dateToIso } from '../utils/yearProgress';
 import * as H from '../utils/haptics';
 
@@ -41,7 +39,6 @@ type QuickAddEventSheetProps = {
 };
 
 export default function QuickAddEventSheet({ t, onClose, createEvent }: QuickAddEventSheetProps) {
-  const { canAddEvent } = usePremium();
   const reduceMotion = useReducedMotion();
 
   const [title, setTitle] = useState('');
@@ -67,13 +64,6 @@ export default function QuickAddEventSheet({ t, onClose, createEvent }: QuickAdd
   async function handleSave() {
     if (!title.trim() || saving) return;
     setErrorMessage(null);
-    if (!canAddEvent) {
-      Alert.alert(
-        'Free limit reached',
-        `You've used all ${FREE_EVENT_LIMIT} free events. Delete an existing event to add a new one.`
-      );
-      return;
-    }
     setSaving(true);
     try {
       await createEvent({

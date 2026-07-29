@@ -1,26 +1,12 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Linking, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as H from '../utils/haptics';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme, useThemeMode } from '../theme/ThemeContext';
 import { useSettings } from '../hooks/useSettings';
-import { usePremium, FREE_EVENT_LIMIT } from '../context/PremiumContext';
-import { RootStackParamList } from '../types';
 import { THEME_MODE_OPTIONS } from '../theme/themeOptions';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-type Props = {
-  navigation: StackNavigationProp<RootStackParamList>;
-};
-
-const PREMIUM_FEATURES = [
-  'Unlimited events',
-  'Cross-device sync',
-  'Multiple reminders per event',
-  'Export your events as CSV',
-];
 
 function Toggle({
   value,
@@ -44,13 +30,10 @@ function Toggle({
   );
 }
 
-export default function SettingsScreen({ navigation }: Props) {
+export default function SettingsScreen() {
   const t = useTheme();
   const { mode, setMode } = useThemeMode();
   const { settings, updateSetting } = useSettings();
-  const { eventCount } = usePremium();
-
-  const atLimit = eventCount >= FREE_EVENT_LIMIT;
 
   return (
     <View style={[styles.root, { backgroundColor: t.background }]}>
@@ -67,35 +50,6 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={[styles.heroSubtitle, { color: t.textMuted }]}>
             Tune Mica to match how you think about time.
           </Text>
-        </View>
-
-        {/* Premium card */}
-        <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-          <View style={[styles.cardBloom, { backgroundColor: t.accentSoft }]} />
-          <Text style={[styles.eyebrow, { color: t.textMuted }]}>MICA · PREMIUM</Text>
-          <Text style={[styles.premiumTitle, { color: t.text }]}>Upgrade to Premium</Text>
-          <Text style={[styles.premiumSubtitle, { color: t.textMuted }]}>
-            One-time purchase, lifetime access.
-          </Text>
-          <View style={styles.featureList}>
-            {PREMIUM_FEATURES.map((f, i) => (
-              <View key={i} style={styles.featureRow}>
-                <View style={[styles.featureDot, { backgroundColor: t.accentStrong }]} />
-                <Text style={[styles.featureText, { color: t.text }]}>{f}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={[styles.usageLine, { color: atLimit ? t.danger : t.textMuted }]}>
-            {eventCount} / {FREE_EVENT_LIMIT} events used
-          </Text>
-          <TouchableOpacity
-            style={[styles.unlockBtn, { backgroundColor: t.accentStrong }]}
-            onPress={() =>
-              Alert.alert('Coming soon', 'Premium features are coming in a future update.')
-            }
-          >
-            <Text style={[styles.unlockBtnText, { color: t.onAccent }]}>Unlock Mica Premium</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Appearance card */}
@@ -178,18 +132,6 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
         </View>
 
-        {/* Invite */}
-        <TouchableOpacity
-          style={[styles.card, styles.settingRow, { backgroundColor: t.surface, borderColor: t.border }]}
-          onPress={() => navigation.navigate('Invite')}
-        >
-          <View style={[styles.iconBadge, { backgroundColor: t.accentSoft }]}>
-            <Ionicons name="person-add-outline" size={16} color={t.accentStrong} />
-          </View>
-          <Text style={[styles.settingLabel, { color: t.text, flex: 1 }]}>Invite a friend</Text>
-          <Ionicons name="chevron-forward" size={18} color={t.textMuted} />
-        </TouchableOpacity>
-
         {/* About card */}
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
           <View style={styles.sectionHeaderRow}>
@@ -209,7 +151,7 @@ export default function SettingsScreen({ navigation }: Props) {
               icon: 'shield-checkmark-outline' as IoniconName,
               label: 'Privacy Policy',
               value: undefined,
-              onPress: () => Alert.alert('Coming soon', 'Privacy policy will be at mica.app/privacy'),
+              onPress: () => Linking.openURL('https://aniketh703.github.io/Mica/privacy/'),
             },
             {
               icon: 'star-outline' as IoniconName,
@@ -255,17 +197,6 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 28, fontWeight: '800', letterSpacing: -0.7, lineHeight: 34 },
   heroSubtitle: { fontSize: 15, lineHeight: 22, maxWidth: 300 },
   card: { borderRadius: 24, padding: 18, borderWidth: 1, overflow: 'hidden', position: 'relative', gap: 12 },
-  cardBloom: { position: 'absolute', width: 200, height: 200, borderRadius: 100, top: -80, right: -60, opacity: 0.38 },
-  eyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 2.5 },
-  premiumTitle: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5, marginTop: -4 },
-  premiumSubtitle: { fontSize: 15, marginTop: -4 },
-  featureList: { gap: 10 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  featureDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
-  featureText: { fontSize: 15 },
-  usageLine: { fontSize: 13, marginTop: -4 },
-  unlockBtn: { minHeight: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  unlockBtnText: { fontSize: 16, fontWeight: '700' },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   themeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: -4 },

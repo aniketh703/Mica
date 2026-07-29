@@ -4,3 +4,9 @@
 
 # Dev artifacts
 node_modules/
+
+# Local-machine-only Android build state (path leaks, and it's the bulk of the 795MB archive)
+android/local.properties
+android/build/
+android/app/build/
+android/.gradle/

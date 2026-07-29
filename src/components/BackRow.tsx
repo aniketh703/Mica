@@ -1,6 +1,4 @@
-// Shared "go back" navigation row: chevron + label. Previously implemented
-// independently in EventDetailScreen and InviteScreen with slightly different
-// markup (vector icon vs. text glyph) for the identical purpose.
+// Shared "go back" navigation row: chevron + label.
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

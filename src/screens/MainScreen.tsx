@@ -27,7 +27,7 @@ export default function MainScreen({ navigation }: Props) {
         <EventsScreen navigation={navigation} />
       </View>
       <View style={activeTab === 'settings' ? styles.tabPane : styles.hidden}>
-        <SettingsScreen navigation={navigation} />
+        <SettingsScreen />
       </View>
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} t={t} />
     </View>

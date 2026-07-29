@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { MicaEvent } from '../types';
 import { useEventRepository } from './useEventRepository';
 import { effectiveDaysUntil } from '../utils/yearProgress';
-import { usePremium } from '../context/PremiumContext';
 
 interface UseEventsResult {
   events: MicaEvent[];
@@ -17,7 +16,6 @@ interface UseEventsResult {
 
 export function useEvents(): UseEventsResult {
   const repo = useEventRepository();
-  const { refreshCount } = usePremium();
   const [events, setEvents] = useState<MicaEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,9 +56,9 @@ export function useEvents(): UseEventsResult {
   ): Promise<MicaEvent> => {
     const payload: Omit<MicaEvent, 'id' | 'appwriteId' | 'createdAt' | 'updatedAt'> = { ...data, notificationIds: [] };
     const ev = await repo.create(payload);
-    await Promise.all([refresh(), refreshCount()]);
+    await refresh();
     return ev;
-  }, [repo, refresh, refreshCount]);
+  }, [repo, refresh]);
 
   const updateEvent = useCallback(async (id: string, patch: Partial<MicaEvent>): Promise<MicaEvent> => {
     const ev = await repo.update(id, patch);
@@ -70,8 +68,8 @@ export function useEvents(): UseEventsResult {
 
   const deleteEvent = useCallback(async (id: string): Promise<void> => {
     await repo.delete(id);
-    await Promise.all([refresh(), refreshCount()]);
-  }, [repo, refresh, refreshCount]);
+    await refresh();
+  }, [repo, refresh]);
 
   return { events, loading, error, refresh, createEvent, updateEvent, deleteEvent };
 }
