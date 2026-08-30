@@ -151,7 +151,7 @@ export default function SettingsScreen() {
               icon: 'shield-checkmark-outline' as IoniconName,
               label: 'Privacy Policy',
               value: undefined,
-              onPress: () => Linking.openURL('https://aniketh703.github.io/Mica/privacy/'),
+              onPress: () => Linking.openURL('https://gist.github.com/aniketh703/24b12ba1a350d351a7d0543b4204652b'),
             },
             {
               icon: 'star-outline' as IoniconName,
